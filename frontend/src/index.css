@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 10 11 28;
+    --surface: 20 21 46;
+    --surface-raised: 29 31 61;
+    --primary: 44 43 115;
+    --accent: 196 255 77;
+  }
+
+  body {
+    background-color: #0A0B1C;
+    color: #EEF0FA;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Accessible focus outline */
+  :focus-visible {
+    outline: 2px solid #C4FF4D;
+    outline-offset: 2px;
+  }
+}
+
+/* Large Text Accessibility Mode */
+html.text-size-lg {
+  font-size: 112.5%; /* 18px base instead of 16px */
+}
+
+/* Tabular figures for numbers, currency, timestamps */
+.font-mono-data {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Restrained Cyber Lime Glow for primary CTA */
+.lime-glow {
+  box-shadow: 0 0 14px rgba(196, 255, 77, 0.28);
+}
+
+.lime-glow-subtle {
+  box-shadow: 0 0 8px rgba(196, 255, 77, 0.16);
+}
+
+/* Pulse animation for live data freshness */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
+}
+
+.pulse-dot {
+  animation: pulse-subtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom subtle dark scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0B1C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C2B73;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3A38A0;
+}
