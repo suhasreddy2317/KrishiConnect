@@ -1,5 +1,9 @@
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -15,8 +19,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
     
-    # Database - Default SQLite for Windows dev environment, portable to PostgreSQL
-    DATABASE_URL: str = "sqlite:///./krishiconnect.db"
+    # Database - Default SQLite for local development, portable to PostgreSQL
+    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'krishiconnect.db'}"
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

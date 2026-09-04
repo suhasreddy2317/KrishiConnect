@@ -3,13 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.api_router import api_router
-from app.db.session import engine, Base
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure database tables exist on startup (SQLite or PostgreSQL)
-    Base.metadata.create_all(bind=engine)
+    # Database schema is managed by Alembic migrations.
+    # Run `alembic upgrade head` before starting the application.
     yield
 
 

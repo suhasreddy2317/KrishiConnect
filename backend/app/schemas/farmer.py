@@ -1,3 +1,4 @@
+from datetime import date
 from pydantic import BaseModel, ConfigDict
 
 
@@ -9,6 +10,7 @@ class FarmerCreate(BaseModel):
     state: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    user_id: int | None = None
 
 
 class FarmerResponse(FarmerCreate):

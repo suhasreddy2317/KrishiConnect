@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.session import Base
 
 
@@ -6,6 +7,7 @@ class Farmer(Base):
     __tablename__ = "farmers"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     name = Column(String(100), nullable=False)
     phone = Column(String(20), unique=True, nullable=False, index=True)
     village = Column(String(100), nullable=True)
@@ -13,3 +15,5 @@ class Farmer(Base):
     state = Column(String(100), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+
+    user = relationship("User", back_populates="farmer")
