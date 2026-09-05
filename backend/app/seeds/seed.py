@@ -31,17 +31,17 @@ DEMO_PHONES = {
 
 
 def _delete_existing_seed_data(db: Session) -> None:
-    db.query(FPOMember).delete()
-    db.query(MarketPrice).delete()
-    db.query(ProduceLot).delete()
-    db.query(StorageOption).delete()
-    db.query(Market).delete()
-    db.query(Commodity).delete()
-    db.query(Buyer).delete()
-    db.query(FPO).delete()
-    db.query(Farmer).delete()
+    db.execute(__import__('sqlalchemy').text('DELETE FROM fpo_members'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM market_prices'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM produce_lots'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM storage_options'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM markets'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM commodities'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM buyers'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM fpos'))
+    db.execute(__import__('sqlalchemy').text('DELETE FROM farmers'))
     for phone in DEMO_PHONES.values():
-        db.query(User).filter(User.phone == phone).delete()
+        db.execute(__import__('sqlalchemy').text('DELETE FROM users WHERE phone = :p'), {'p': phone})
     db.flush()
 
 
@@ -129,18 +129,39 @@ def seed_market_prices(db: Session, markets: dict[str, Market], commodities: dic
     prices = []
     for market_key, market in markets.items():
         for commodity_key, commodity in commodities.items():
-            base_price = 1500 + (hash(market_key + commodity_key) % 3000)
-            for days_ago in range(0, 5):
+            seed_hash = hash(market_key + commodity_key)
+            base_price = 1500 + (seed_hash % 3000)
+
+            trend_type = seed_hash % 6
+            if trend_type == 0:
+                daily_drift = 80.0
+            elif trend_type == 1:
+                daily_drift = -70.0
+            elif trend_type == 2:
+                daily_drift = 0.0
+            elif trend_type == 3:
+                daily_drift = 50.0
+            elif trend_type == 4:
+                daily_drift = -45.0
+            else:
+                daily_drift = 0.0
+
+            current_base = base_price
+            for days_ago in range(0, 21):
                 d = today - timedelta(days=days_ago)
-                variation = (days_ago * 25) + (hash(f"{market_key}-{commodity_key}-{d}") % 100)
+                noise = ((seed_hash * (days_ago + 1)) % 100) - 50
+                current_base = base_price + (daily_drift * (21 - days_ago))
+                modal = current_base + noise
+                min_p = modal - 120
+                max_p = modal + 120
                 prices.append(MarketPrice(
                     market_id=market.id,
                     commodity_id=commodity.id,
                     price_date=d,
-                    min_price=float(base_price + variation),
-                    max_price=float(base_price + variation + 200),
-                    modal_price=float(base_price + variation + 100),
-                    arrival_volume=float(50 + (hash(f"vol-{market_key}-{commodity_key}-{d}") % 200)),
+                    min_price=float(max(min_p, 100)),
+                    max_price=float(max(max_p, 200)),
+                    modal_price=float(max(modal, 100)),
+                    arrival_volume=float(80 + (seed_hash % 180) + (days_ago * 2)),
                     source="seeded_demo",
                 ))
     db.add_all(prices)
