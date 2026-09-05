@@ -10,7 +10,9 @@ import {
   Menu,
   X,
   Layers,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface NavItem {
   name: string;
@@ -31,6 +33,7 @@ export const AppLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     // Check backend health status
@@ -170,6 +173,18 @@ export const AppLayout: React.FC = () => {
                   API: {backendStatus}
                 </span>
               </div>
+
+              {user && (
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono border border-[#2C2B73] text-[#A7ABC9] hover:text-[#E5484D] hover:border-[#E5484D]/40 transition-colors"
+                  aria-label="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              )}
 
               {/* Mobile Menu Button */}
               <button

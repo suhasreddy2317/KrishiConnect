@@ -1,36 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.models.farmer import Farmer
 from app.models.produce_lot import ProduceLot
-from app.schemas.produce_lot import (
-    ProduceLotCreate,
-    ProduceLotResponse,
-)
-
+from app.models.user import User
+from app.schemas.produce_lot import ProduceLotCreate, ProduceLotResponse
+from app.utils.auth import hash_password
+from app.utils.dependencies import require_roles, get_current_user
 
 router = APIRouter()
 
 
-@router.post("/", response_model=ProduceLotResponse, status_code=201)
+@router.post("/", response_model=ProduceLotResponse, status_code=status.HTTP_201_CREATED)
 def create_lot(
     lot_data: ProduceLotCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    farmer = (
-        db.query(Farmer)
-        .filter(Farmer.id == lot_data.farmer_id)
-        .first()
-    )
+    farmer_id = lot_data.farmer_id
 
+    if current_user.role == UserRole.farmer:
+        farmer = db.query(Farmer).filter(Farmer.user_id == current_user.id).first()
+        if farmer:
+            farmer_id = farmer.id
+
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
     if not farmer:
-        raise HTTPException(
-            status_code=404,
-            detail="Farmer not found",
-        )
+        raise HTTPException(status_code=404, detail="Farmer not found")
 
-    lot = ProduceLot(**lot_data.model_dump())
+    lot = ProduceLot(
+        **lot_data.model_dump(exclude={"farmer_id"}),
+        farmer_id=farmer_id,
+    )
 
     db.add(lot)
     db.commit()
@@ -42,6 +45,7 @@ def create_lot(
 @router.get("/", response_model=list[ProduceLotResponse])
 def get_lots(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return db.query(ProduceLot).all()
 
@@ -50,6 +54,7 @@ def get_lots(
 def get_lot(
     lot_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     lot = (
         db.query(ProduceLot)

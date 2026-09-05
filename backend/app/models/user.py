@@ -14,6 +14,7 @@ class User(Base):
     email = Column(String(120), nullable=True, index=True)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.farmer)
     is_active = Column(Boolean, default=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

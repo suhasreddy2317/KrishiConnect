@@ -15,6 +15,7 @@ from app.models.market import Market
 from app.models.market_price import MarketPrice
 from app.models.produce_lot import ProduceLot
 from app.models.storage_option import StorageOption
+from app.utils.auth import hash_password
 
 
 def test_database_connection(db: Session):
@@ -24,7 +25,7 @@ def test_database_connection(db: Session):
 
 
 def test_user_creation(db: Session):
-    user = User(name="Test Farmer", phone="+919000000001", role=UserRole.farmer, is_active=True)
+    user = User(name="Test Farmer", phone="+919000000001", role=UserRole.farmer, is_active=True, password_hash=hash_password("testpassword"))
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -41,7 +42,7 @@ def test_user_creation(db: Session):
 def test_user_role_representation(db: Session):
     roles = [UserRole.farmer, UserRole.fpo_manager, UserRole.buyer, UserRole.field_agent, UserRole.admin]
     for role in roles:
-        user = User(name=f"Test {role.value}", phone=f"+9190000000{roles.index(role) + 1}", role=role)
+        user = User(name=f"Test {role.value}", phone=f"+9190000000{roles.index(role) + 1}", role=role, password_hash=hash_password("testpassword"))
         db.add(user)
     db.commit()
 
@@ -52,7 +53,7 @@ def test_user_role_representation(db: Session):
 
 
 def test_farmer_creation(db: Session):
-    user = User(name="Farmer User", phone="+919000000010", role=UserRole.farmer)
+    user = User(name="Farmer User", phone="+919000000010", role=UserRole.farmer, password_hash=hash_password("testpassword"))
     db.add(user)
     db.flush()
 
@@ -68,7 +69,7 @@ def test_farmer_creation(db: Session):
 
 
 def test_farmer_user_relationship(db: Session):
-    user = User(name="Farmer", phone="+919000000011", role=UserRole.farmer)
+    user = User(name="Farmer", phone="+919000000011", role=UserRole.farmer, password_hash=hash_password("testpassword"))
     db.add(user)
     db.flush()
 
@@ -93,7 +94,7 @@ def test_fpo_creation(db: Session):
 
 
 def test_fpo_member_relationship(db: Session):
-    user = User(name="Member", phone="+919000000020", role=UserRole.farmer)
+    user = User(name="Member", phone="+919000000020", role=UserRole.farmer, password_hash=hash_password("testpassword"))
     db.add(user)
     db.flush()
 

@@ -18,15 +18,43 @@ from app.models.market import Market
 from app.models.market_price import MarketPrice
 from app.models.produce_lot import ProduceLot
 from app.models.storage_option import StorageOption
+from app.utils.auth import hash_password
+
+
+DEMO_PHONES = {
+    "farmer_1": "+919876543210",
+    "fpo_manager_1": "+919876543211",
+    "buyer_1": "+919876543212",
+    "field_agent_1": "+919876543213",
+    "admin_1": "+919876543214",
+}
+
+
+def _delete_existing_seed_data(db: Session) -> None:
+    db.query(FPOMember).delete()
+    db.query(MarketPrice).delete()
+    db.query(ProduceLot).delete()
+    db.query(StorageOption).delete()
+    db.query(Market).delete()
+    db.query(Commodity).delete()
+    db.query(Buyer).delete()
+    db.query(FPO).delete()
+    db.query(Farmer).delete()
+    for phone in DEMO_PHONES.values():
+        db.query(User).filter(User.phone == phone).delete()
+    db.flush()
 
 
 def seed_users(db: Session) -> dict[str, User]:
+    _delete_existing_seed_data(db)
+
+    demo_password = hash_password("demo-password")
     users = {
-        "farmer_1": User(name="Ramesh Patil", phone="+919876543210", role=UserRole.farmer, is_active=True),
-        "fpo_manager_1": User(name="Sunita Jadhav", phone="+919876543211", role=UserRole.fpo_manager, is_active=True),
-        "buyer_1": User(name="Anand Kumar", phone="+919876543212", role=UserRole.buyer, is_active=True),
-        "field_agent_1": User(name="Priya Deshmukh", phone="+919876543213", role=UserRole.field_agent, is_active=True),
-        "admin_1": User(name="Admin User", phone="+919876543214", role=UserRole.admin, is_active=True),
+        "farmer_1": User(name="Ramesh Patil", phone=DEMO_PHONES["farmer_1"], role=UserRole.farmer, is_active=True, password_hash=demo_password),
+        "fpo_manager_1": User(name="Sunita Jadhav", phone=DEMO_PHONES["fpo_manager_1"], role=UserRole.fpo_manager, is_active=True, password_hash=demo_password),
+        "buyer_1": User(name="Anand Kumar", phone=DEMO_PHONES["buyer_1"], role=UserRole.buyer, is_active=True, password_hash=demo_password),
+        "field_agent_1": User(name="Priya Deshmukh", phone=DEMO_PHONES["field_agent_1"], role=UserRole.field_agent, is_active=True, password_hash=demo_password),
+        "admin_1": User(name="Admin User", phone=DEMO_PHONES["admin_1"], role=UserRole.admin, is_active=True, password_hash=demo_password),
     }
     db.add_all(list(users.values()))
     db.flush()
