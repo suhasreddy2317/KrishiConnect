@@ -9,6 +9,7 @@ from .commodity import CommodityCreate, CommodityResponse
 from .market import MarketCreate, MarketResponse
 from .market_price import MarketPriceCreate, MarketPriceResponse
 from .storage_option import StorageOptionCreate, StorageOptionResponse
+from .recommendation import SaleWindowResponse
 
 __all__ = [
     "HealthResponse",
@@ -32,4 +33,5 @@ __all__ = [
     "MarketPriceResponse",
     "StorageOptionCreate",
     "StorageOptionResponse",
+    "SaleWindowResponse",
 ]
