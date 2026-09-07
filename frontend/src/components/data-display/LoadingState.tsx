@@ -21,24 +21,23 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           className
         )}
       >
-        <Loader2 className="w-8 h-8 animate-spin text-[#C4FF4D]" />
-        <span className="text-xs font-mono text-[#A7ABC9]">{message}</span>
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <span className="text-xs font-mono text-text-muted">{message}</span>
       </div>
     );
   }
 
-  // Skeleton variant for card lists
   return (
     <div className={cn('space-y-4 animate-pulse', className)}>
-      <div className="h-28 rounded-xl bg-[#14152E] border border-[#2C2B73]/60 p-5 space-y-3">
-        <div className="h-4 w-1/3 bg-[#1D1F3D] rounded" />
-        <div className="h-8 w-1/2 bg-[#1D1F3D] rounded" />
-        <div className="h-3 w-1/4 bg-[#1D1F3D] rounded" />
+      <div className="h-28 rounded-xl bg-surface border border-border p-5 space-y-3">
+        <div className="h-4 w-1/3 bg-surface-raised rounded" />
+        <div className="h-8 w-1/2 bg-surface-raised rounded" />
+        <div className="h-3 w-1/4 bg-surface-raised rounded" />
       </div>
-      <div className="h-28 rounded-xl bg-[#14152E] border border-[#2C2B73]/60 p-5 space-y-3">
-        <div className="h-4 w-1/4 bg-[#1D1F3D] rounded" />
-        <div className="h-8 w-2/3 bg-[#1D1F3D] rounded" />
-        <div className="h-3 w-1/3 bg-[#1D1F3D] rounded" />
+      <div className="h-28 rounded-xl bg-surface border border-border p-5 space-y-3">
+        <div className="h-4 w-1/4 bg-surface-raised rounded" />
+        <div className="h-8 w-2/3 bg-surface-raised rounded" />
+        <div className="h-3 w-1/3 bg-surface-raised rounded" />
       </div>
     </div>
   );

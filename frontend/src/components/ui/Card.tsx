@@ -26,11 +26,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     const baseStyles = 'rounded-xl border transition-colors';
 
     const variantStyles = {
-      default: 'bg-[#14152E] border-[#2C2B73]/70 text-[#EEF0FA]', // Loam base elevation
-      raised: 'bg-[#1D1F3D] border-[#5B5E8C]/30 text-[#EEF0FA]', // Topsoil elevation
+      default: 'bg-surface border-border text-text-main',
+      raised: 'bg-surface-raised border-border text-text-main',
       interactive:
-        'bg-[#14152E] hover:bg-[#1D1F3D] border-[#2C2B73]/70 hover:border-[#5B5E8C] text-[#EEF0FA] cursor-pointer active:scale-[0.99]',
-      flat: 'bg-transparent border-[#2C2B73]/50 text-[#EEF0FA]',
+        'bg-surface hover:bg-surface-raised border-border hover:border-primary text-text-main cursor-pointer active:scale-[0.99]',
+      flat: 'bg-transparent border-border text-text-main',
     };
 
     const paddingStyles = {
@@ -49,15 +49,15 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {...props}
       >
         {hasHeader && (
-          <div className="flex items-start justify-between gap-3 pb-4 mb-4 border-b border-[#2C2B73]/60">
+          <div className="flex items-start justify-between gap-3 pb-4 mb-4 border-b border-border">
             <div>
               {title && (
-                <div className="text-base font-semibold text-[#EEF0FA] tracking-tight">
+                <div className="text-base font-semibold text-text-main tracking-tight">
                   {title}
                 </div>
               )}
               {subtitle && (
-                <div className="text-xs text-[#A7ABC9] mt-0.5">{subtitle}</div>
+                <div className="text-xs text-text-muted mt-0.5">{subtitle}</div>
               )}
             </div>
             {headerAction && <div className="shrink-0">{headerAction}</div>}

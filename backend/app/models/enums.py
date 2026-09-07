@@ -63,3 +63,16 @@ class OfferStatus(str, Enum):
     accepted = "accepted"
     rejected = "rejected"
     expired = "expired"
+
+
+class DemandStatus(str, Enum):
+    active = "active"
+    fulfilled = "fulfilled"
+    expired = "expired"
+    cancelled = "cancelled"
+
+
+class GradeCompatibility(str, Enum):
+    exact = "exact"
+    compatible = "compatible"
+    incompatible = "incompatible"

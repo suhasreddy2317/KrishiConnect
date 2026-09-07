@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
 import { Section } from '@/components/layout/Section';
 import { DashboardGrid } from '@/components/layout/DashboardGrid';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/status/StatusBadge';
 import { SyncStatus } from '@/components/status/SyncStatus';
@@ -13,16 +12,86 @@ import { DataFreshness } from '@/components/status/DataFreshness';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Table } from '@/components/data-display/Table';
 import { AlertBanner } from '@/components/status/AlertBanner';
+import { LoadingState } from '@/components/data-display/LoadingState';
+import { ErrorState } from '@/components/data-display/ErrorState';
+import { EmptyState } from '@/components/data-display/EmptyState';
 import { Users, Layers, Building2, Coins, Plus, Activity, Info } from 'lucide-react';
 
-interface PooledLot {
-  id: string;
+import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/lib/api';
+
+interface BackendLot {
+  id: number;
   crop: string;
-  quantity: string;
-  grade: string;
-  members: number;
+  commodity_id: number | null;
+  quantity_kg: number;
+  unit: string;
+  quality_grade: string;
+  moisture_percent: number | null;
+  harvest_date: string | null;
+  location: string | null;
+  expected_price_per_kg: number | null;
   status: string;
-  updated: string;
+  farmer_id: number;
+}
+
+interface BackendDemand {
+  id: number;
+  commodity_id: number;
+  required_quantity: number;
+  unit: string;
+  minimum_grade: string | null;
+  delivery_location: string | null;
+  required_by: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+interface BackendOffer {
+  id: number;
+  demand_id: number;
+  lot_id: number;
+  buyer_id: number;
+  farmer_id: number;
+  quantity: number;
+  offered_price: number;
+  pickup_window: string;
+  payment_terms: string;
+  message: string | null;
+  status: string;
+  parent_offer_id: number | null;
+  round: number;
+  expires_at: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+interface BackendPayment {
+  id: number;
+  transaction_id: number;
+  amount: number;
+  payment_method: string | null;
+  status: string;
+  reference: string | null;
+  initiated_at: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+interface BackendCommodity {
+  id: number;
+  name: string;
+  variety: string | null;
+  unit: string;
+  is_perishable: boolean;
+  perishability_profile: string | null;
+  grading_parameters: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface MemberActivity {
@@ -32,15 +101,155 @@ interface MemberActivity {
   crop: string;
 }
 
-export const FpoPage: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState('/fpo');
+const formatRelativeTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-  const pooledLots: PooledLot[] = [
-    { id: 'FPO-PL-1041', crop: 'Red Onion', quantity: '120 Quintals', grade: 'Grade A', members: 8, status: 'available', updated: '2 hrs ago' },
-    { id: 'FPO-PL-1040', crop: 'Soybean', quantity: '85 Quintals', grade: 'Grade B', members: 5, status: 'matched', updated: '5 hrs ago' },
-    { id: 'FPO-PL-1039', crop: 'Wheat', quantity: '200 Quintals', grade: 'Grade A', members: 12, status: 'available', updated: '1 day ago' },
-    { id: 'FPO-PL-1038', crop: 'Tomato', quantity: '45 Quintals', grade: 'Grade A', members: 3, status: 'sold', updated: '2 days ago' },
-  ];
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hr${diffHours !== 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const mapLotStatus = (status: string): 'active' | 'kyc-verified' | 'completed' | 'pending-verification' | 'warning' => {
+  const map: Record<string, 'active' | 'kyc-verified' | 'completed' | 'pending-verification' | 'warning'> = {
+    published: 'active',
+    matched: 'kyc-verified',
+    sold: 'completed',
+    draft: 'pending-verification',
+    archived: 'warning',
+  };
+  return map[status] || 'pending-verification';
+};
+
+const mapDemandStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' => {
+  const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification'> = {
+    active: 'active',
+    fulfilled: 'completed',
+    expired: 'warning',
+    cancelled: 'completed',
+  };
+  return map[status] || 'active';
+};
+
+const mapPaymentStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute' => {
+  const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute'> = {
+    pending: 'pending-verification',
+    initiated: 'active',
+    processing: 'active',
+    completed: 'completed',
+    failed: 'dispute',
+    cancelled: 'warning',
+  };
+  return map[status] || 'active';
+};
+
+export const FpoPage: React.FC = () => {
+  const { token } = useAuth();
+  const [activeTab, setActiveTab] = useState('/fpo');
+
+  const [lotsLoading, setLotsLoading] = useState(false);
+  const [lotsError, setLotsError] = useState<string | null>(null);
+  const [lots, setLots] = useState<BackendLot[]>([]);
+
+  const [demandsLoading, setDemandsLoading] = useState(false);
+  const [demandsError, setDemandsError] = useState<string | null>(null);
+  const [demands, setDemands] = useState<BackendDemand[]>([]);
+
+  const [offers, setOffers] = useState<BackendOffer[]>([]);
+
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [payments, setPayments] = useState<BackendPayment[]>([]);
+
+  const [commodities, setCommodities] = useState<BackendCommodity[]>([]);
+
+  const getCommodityName = (id: number): string => {
+    const commodity = commodities.find(c => c.id === id);
+    return commodity?.name || `Commodity #${id}`;
+  };
+
+  const fetchLots = async () => {
+    if (!token) return;
+    setLotsLoading(true);
+    setLotsError(null);
+    try {
+      const data = await apiRequest<BackendLot[]>('/lots/', { method: 'GET' }, token);
+      setLots(data);
+    } catch (err) {
+      setLotsError(err instanceof Error ? err.message : 'Failed to load lots');
+    } finally {
+      setLotsLoading(false);
+    }
+  };
+
+  const fetchDemands = async () => {
+    if (!token) return;
+    setDemandsLoading(true);
+    setDemandsError(null);
+    try {
+      const data = await apiRequest<{ items: BackendDemand[]; total: number }>('/demands/', { method: 'GET' }, token);
+      setDemands(data.items);
+    } catch (err) {
+      setDemandsError(err instanceof Error ? err.message : 'Failed to load demands');
+    } finally {
+      setDemandsLoading(false);
+    }
+  };
+
+  const fetchOffers = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<{ items: BackendOffer[]; total: number }>('/offers/', { method: 'GET' }, token);
+      setOffers(data.items);
+    } catch (err) {
+      console.error('Failed to load offers', err);
+      setOffers([]);
+    }
+  };
+
+  const fetchPayments = async () => {
+    if (!token) return;
+    setPaymentsLoading(true);
+    setPaymentsError(null);
+    try {
+      const data = await apiRequest<{ items: BackendPayment[]; total: number }>('/payments/', { method: 'GET' }, token);
+      setPayments(data.items);
+    } catch (err) {
+      setPaymentsError(err instanceof Error ? err.message : 'Failed to load payments');
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const fetchCommodities = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<BackendCommodity[]>('/commodities/', { method: 'GET' }, token);
+      setCommodities(data);
+    } catch (err) {
+      console.error('Failed to load commodities', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    fetchLots();
+    fetchDemands();
+    fetchOffers();
+    fetchPayments();
+    fetchCommodities();
+  }, [token]);
+
+  const totalLots = lots.length;
+  const totalQuantityQtl = Math.round(lots.reduce((sum, lot) => sum + lot.quantity_kg, 0) / 100);
+  const activeDemandsCount = demands.filter(d => d.status === 'active').length;
+  const pendingOffersCount = offers.filter(o => o.status === 'submitted' || o.status === 'countered').length;
 
   const memberActivity: MemberActivity[] = [
     { name: 'Ramesh Patil', action: 'Deposited lot', time: '10 mins ago', crop: 'Red Onion' },
@@ -50,15 +259,31 @@ export const FpoPage: React.FC = () => {
   ];
 
   const lotColumns = [
-    { key: 'id', header: 'Lot ID', align: 'left' as const },
+    { key: 'id', header: 'Lot ID', align: 'left' as const, render: (item: BackendLot) => <span className="text-xs font-mono text-text-main">LOT-{item.id}</span> },
     { key: 'crop', header: 'Crop', align: 'left' as const },
-    { key: 'quantity', header: 'Quantity', align: 'right' as const, isNumeric: true },
-    { key: 'grade', header: 'Grade', align: 'center' as const },
-    { key: 'members', header: 'Members', align: 'center' as const, isNumeric: true },
-    { key: 'status', header: 'Status', align: 'center' as const, render: (item: PooledLot) => (
-      <StatusBadge status={item.status === 'available' ? 'active' : item.status === 'matched' ? 'kyc-verified' : 'completed'} label={item.status} size="sm" />
-    )},
-    { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: PooledLot) => <DataFreshness timestamp={item.updated} /> },
+    { key: 'quantity', header: 'Quantity', align: 'right' as const, isNumeric: true, render: (item: BackendLot) => <span className="text-xs font-mono text-text-main">{item.quantity_kg.toLocaleString()} {item.unit}</span> },
+    { key: 'grade', header: 'Grade', align: 'center' as const, render: (item: BackendLot) => <StatusBadge status="grade" label={item.quality_grade} size="sm" /> },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendLot) => <StatusBadge status={mapLotStatus(item.status)} label={item.status} size="sm" /> },
+    { key: 'updated', header: 'Updated', align: 'left' as const, render: () => <DataFreshness timestamp="Live data" isLive /> },
+  ];
+
+  const demandColumns = [
+    { key: 'id', header: 'RFQ ID', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs font-mono text-text-main">RFQ-{item.id}</span> },
+    { key: 'crop', header: 'Commodity', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs text-text-main">{getCommodityName(item.commodity_id)}</span> },
+    { key: 'quantity', header: 'Qty + Unit', align: 'right' as const, isNumeric: true, render: (item: BackendDemand) => <span className="text-xs font-mono text-text-main">{item.required_quantity.toLocaleString()} {item.unit}</span> },
+    { key: 'grade', header: 'Grade', align: 'center' as const, render: (item: BackendDemand) => <span className="text-xs text-text-main">{item.minimum_grade || '—'}</span> },
+    { key: 'location', header: 'Delivery', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs text-text-muted">{item.delivery_location || '—'}</span> },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendDemand) => <StatusBadge status={mapDemandStatus(item.status)} label={item.status} size="sm" /> },
+    { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: BackendDemand) => <DataFreshness timestamp={formatRelativeTime(item.updated_at || item.created_at)} /> },
+  ];
+
+  const paymentColumns = [
+    { key: 'id', header: 'Payment ID', align: 'left' as const, render: (item: BackendPayment) => <span className="text-xs font-mono text-text-main">PAY-{item.id}</span> },
+    { key: 'transaction_id', header: 'Transaction', align: 'left' as const, render: (item: BackendPayment) => <span className="text-xs text-text-muted">TXN-{item.transaction_id}</span> },
+    { key: 'amount', header: 'Amount', align: 'right' as const, isNumeric: true, render: (item: BackendPayment) => <span className="text-xs font-mono text-accent">₹{item.amount.toLocaleString('en-IN')}</span> },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendPayment) => <StatusBadge status={mapPaymentStatus(item.status)} label={item.status} size="sm" /> },
+    { key: 'method', header: 'Method', align: 'left' as const, render: (item: BackendPayment) => <span className="text-xs text-text-muted">{item.payment_method || '—'}</span> },
+    { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: BackendPayment) => <DataFreshness timestamp={formatRelativeTime(item.updated_at || item.created_at)} /> },
   ];
 
   return (
@@ -78,42 +303,42 @@ export const FpoPage: React.FC = () => {
 
         <AlertBanner
           variant="info"
-          title="Phase 1 Foundation"
-          message="FPO pooling, demand matching, and payout distribution business logic will be implemented in Phase 3. This dashboard shows the intended shell and data model."
+          title="Backend-Connected Dashboard"
+          message="Overview metrics, pooled lots, active demands, and payout ledger are now connected to live backend APIs. Member activity and compliance sections currently show demo data because dedicated FPO/member endpoints are not yet implemented."
         />
 
         <DashboardGrid columns={4}>
           <MetricCard
             label="Pooled Lots"
-            value="12"
-            unit="Active"
-            change={{ value: '3 this week', isPositive: true }}
-            timestamp="Updated 2m ago"
-            icon={<Layers className="w-4 h-4 text-[#2FBF8F]" />}
+            value={String(totalLots)}
+            unit="Total"
+            change={{ value: 'Live from backend', isPositive: true }}
+            timestamp="Updated just now"
+             icon={<Layers className="w-4 h-4 text-status-success" />}
           />
           <MetricCard
             label="Total Quantity"
-            value="450"
+            value={String(totalQuantityQtl)}
             unit="Quintals"
-            change={{ value: '18% vs last cycle', isPositive: true }}
-            timestamp="Updated 5m ago"
-            icon={<Activity className="w-4 h-4 text-[#C4FF4D]" />}
+            change={{ value: 'Live from backend', isPositive: true }}
+            timestamp="Updated just now"
+             icon={<Activity className="w-4 h-4 text-accent" />}
           />
           <MetricCard
             label="Active Demand"
-            value="7"
+            value={String(activeDemandsCount)}
             unit="Open RFQs"
-            change={{ value: '2 new', isPositive: true }}
-            timestamp="Updated 1m ago"
-            icon={<Building2 className="w-4 h-4 text-[#5B5E8C]" />}
+            change={{ value: 'Live from backend', isPositive: true }}
+            timestamp="Updated just now"
+             icon={<Building2 className="w-4 h-4 text-text-muted" />}
           />
           <MetricCard
             label="Pending Offers"
-            value="4"
+            value={String(pendingOffersCount)}
             unit="Awaiting Response"
-            change={{ value: '1 expired', isPositive: false }}
-            timestamp="Updated 12m ago"
-            icon={<Coins className="w-4 h-4 text-[#F5A623]" />}
+            change={{ value: 'Live from backend', isPositive: false }}
+            timestamp="Updated just now"
+             icon={<Coins className="w-4 h-4 text-status-warning" />}
           />
         </DashboardGrid>
 
@@ -127,12 +352,20 @@ export const FpoPage: React.FC = () => {
               }
             >
               <Card variant="default" padding="none">
-                <Table
-                  columns={lotColumns}
-                  data={pooledLots}
-                  keyExtractor={(item) => item.id}
-                  emptyMessage="No pooled lots yet"
-                />
+                {lotsLoading ? (
+                  <LoadingState message="Loading pooled lots..." />
+                ) : lotsError ? (
+                  <ErrorState title="Unable to load lots" message={lotsError} onRetry={fetchLots} />
+                ) : lots.length === 0 ? (
+                  <EmptyState icon={<Layers className="w-6 h-6" />} title="No pooled lots yet" description="Lots will appear here once farmers publish produce." />
+                ) : (
+                  <Table
+                    columns={lotColumns}
+                    data={lots}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No pooled lots yet"
+                  />
+                )}
               </Card>
             </Section>
 
@@ -143,47 +376,40 @@ export const FpoPage: React.FC = () => {
                 <Button variant="ghost" size="sm">Post New RFQ</Button>
               }
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card variant="raised" padding="md" className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="lime" size="sm">Wheat</Badge>
-                    <DataFreshness timestamp="1 hr ago" source="Buyer Direct" />
-                  </div>
-                  <div className="text-xs text-[#A7ABC9] space-y-1">
-                    <div className="flex justify-between"><span>Quantity:</span><span className="text-[#EEF0FA] font-mono">200 Quintals</span></div>
-                    <div className="flex justify-between"><span>Grade:</span><span className="text-[#EEF0FA]">Grade A</span></div>
-                    <div className="flex justify-between"><span>Delivery:</span><span className="text-[#EEF0FA]">Within 10 days</span></div>
-                  </div>
-                  <Button variant="secondary" size="sm" fullWidth>Match Pooled Lot</Button>
-                </Card>
-                <Card variant="raised" padding="md" className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="default" size="sm">Soybean</Badge>
-                    <DataFreshness timestamp="3 hrs ago" source="Processor RFQ" />
-                  </div>
-                  <div className="text-xs text-[#A7ABC9] space-y-1">
-                    <div className="flex justify-between"><span>Quantity:</span><span className="text-[#EEF0FA] font-mono">100 Quintals</span></div>
-                    <div className="flex justify-between"><span>Grade:</span><span className="text-[#EEF0FA]">Grade B+</span></div>
-                    <div className="flex justify-between"><span>Delivery:</span><span className="text-[#EEF0FA]">Within 14 days</span></div>
-                  </div>
-                  <Button variant="secondary" size="sm" fullWidth>Match Pooled Lot</Button>
-                </Card>
-              </div>
+              <Card variant="default" padding="none">
+                {demandsLoading ? (
+                  <LoadingState message="Loading active demands..." />
+                ) : demandsError ? (
+                  <ErrorState title="Unable to load demands" message={demandsError} onRetry={fetchDemands} />
+                ) : demands.length === 0 ? (
+                  <EmptyState icon={<Building2 className="w-6 h-6" />} title="No active demands" description="Active procurement demands will appear here." />
+                ) : (
+                  <Table
+                    columns={demandColumns}
+                    data={demands}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No active demands"
+                  />
+                )}
+              </Card>
             </Section>
           </div>
 
           <div className="space-y-6">
             <Section title="Member Activity" description="Recent contributions across member farmers.">
               <Card variant="default" padding="none">
-                <div className="divide-y divide-[#2C2B73]/60">
+                <div className="p-3 rounded-lg bg-surface-raised border border-border/30 text-xs text-status-warning mb-3">
+                  Demo data — member activity API not yet implemented
+                </div>
+                <div className="divide-y divide-border/60">
                   {memberActivity.map((activity, idx) => (
                     <div key={idx} className="p-4 flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#1D1F3D] border border-[#5B5E8C]/30 flex items-center justify-center text-[#2FBF8F] shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-surface-raised border border-border/30 flex items-center justify-center text-status-success shrink-0">
                         <Users className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-[#EEF0FA] truncate">{activity.name}</div>
-                        <div className="text-xs text-[#A7ABC9]">{activity.action} • {activity.crop}</div>
+                        <div className="text-sm font-medium text-text-main truncate">{activity.name}</div>
+                        <div className="text-xs text-text-muted">{activity.action} • {activity.crop}</div>
                         <DataFreshness timestamp={activity.time} />
                       </div>
                     </div>
@@ -194,36 +420,40 @@ export const FpoPage: React.FC = () => {
 
             <Card variant="raised" padding="md" className="space-y-3">
               <div className="flex items-center space-x-2">
-                <Coins className="w-4 h-4 text-[#C4FF4D]" />
-                <h3 className="text-sm font-semibold text-[#EEF0FA]">Payout Ledger</h3>
+                <Coins className="w-4 h-4 text-accent" />
+                <h3 className="text-sm font-semibold text-text-main">Payout Ledger</h3>
               </div>
-              <p className="text-xs text-[#A7ABC9] leading-relaxed">
-                Pro-rata distribution calculated from individual lot grade contributions. Next payout cycle: 3 days.
-              </p>
-              <div className="pt-2 space-y-2 text-xs font-mono">
-                <div className="flex justify-between border-b border-[#2C2B73]/50 pb-2">
-                  <span className="text-[#A7ABC9]">Cycle</span>
-                  <span className="text-[#EEF0FA]">#FPO-2026-09</span>
-                </div>
-                <div className="flex justify-between border-b border-[#2C2B73]/50 pb-2">
-                  <span className="text-[#A7ABC9]">Amount</span>
-                  <span className="text-[#C4FF4D] font-bold">₹4,32,000</span>
-                </div>
-                <div className="flex justify-between pt-1">
-                  <span className="text-[#A7ABC9]">Members</span>
-                  <span className="text-[#EEF0FA]">28 Pending</span>
-                </div>
-              </div>
+              {paymentsLoading ? (
+                <LoadingState message="Loading payout ledger..." />
+              ) : paymentsError ? (
+                <ErrorState title="Unable to load payments" message={paymentsError} onRetry={fetchPayments} />
+              ) : payments.length === 0 ? (
+                <EmptyState icon={<Coins className="w-6 h-6" />} title="No payments yet" description="Payouts will appear here once payments are recorded." />
+              ) : (
+                <>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Pro-rata distribution calculated from individual lot grade contributions.
+                  </p>
+                  <Card variant="default" padding="none">
+                    <Table
+                      columns={paymentColumns}
+                      data={payments.slice(0, 5)}
+                      keyExtractor={(item) => String(item.id)}
+                      emptyMessage="No payments recorded"
+                    />
+                  </Card>
+                </>
+              )}
             </Card>
           </div>
         </div>
 
         <Card variant="default" padding="md">
           <div className="flex items-start space-x-4">
-            <Info className="w-5 h-5 text-[#2FBF8F] mt-0.5 shrink-0" />
+            <Info className="w-5 h-5 text-status-success mt-0.5 shrink-0" />
             <div className="space-y-1 text-sm">
-              <h3 className="font-semibold text-[#EEF0FA]">FPO Collective Bargaining Rules (RULES.md Section 6 & 7)</h3>
-              <p className="text-[#A7ABC9] leading-relaxed">
+              <h3 className="font-semibold text-text-main">FPO Collective Bargaining Rules (RULES.md Section 6 & 7)</h3>
+              <p className="text-text-muted leading-relaxed">
                 Each contributing member lot maintains a cryptographic and database reference in the pooled master lot. When a bulk offer is accepted, the FPO manager signs on behalf of the collective, and payment milestones trigger automated individual distribution allocations.
               </p>
             </div>

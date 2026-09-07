@@ -7,6 +7,7 @@ from app.models.commodity import Commodity
 from app.models.market import Market
 from app.models.market_price import MarketPrice
 from app.models.storage_option import StorageOption
+from app.services.demand_radar import calculate_demand_signal
 from app.services.price_intelligence import get_price_intelligence
 
 
@@ -132,15 +133,23 @@ def calculate_sale_window_score(
 
     score += trend_score
 
-    # Factor 2: Demand signal (0-20 points) — placeholder
-    # Demand Radar is not yet implemented; use documented neutral default
-    demand_score = DEMAND_SIGNAL_DEFAULT
+    # Factor 2: Demand signal (0-20 points) from Demand Radar
+    demand_signal = calculate_demand_signal(db, commodity_id, market_id)
+    demand_score = round((demand_signal.get("score", 0.0) / 100.0) * DEMAND_SIGNAL_WEIGHT, 1)
     score += demand_score
+    if demand_signal.get("num_demands", 0) > 0:
+        demand_detail = (
+            f"Demand Radar reports {demand_signal['num_demands']} active demand(s) "
+            f"for this commodity ({demand_signal['demand_quantity']:.0f} {demand_signal.get('commodity_id') and 'kg'}); "
+            f"urgency {demand_signal['urgency']:.0%}."
+        )
+    else:
+        demand_detail = "Demand Radar reports no active demand for this commodity."
     factors.append({
         "name": "Demand Signal",
         "contribution": float(demand_score),
         "weight": DEMAND_SIGNAL_WEIGHT,
-        "detail": "Demand Radar not yet implemented. Using neutral placeholder score.",
+        "detail": demand_detail,
     })
 
     # Factor 3: Perishability (0-20 points)
@@ -248,7 +257,10 @@ def calculate_sale_window_score(
         limitations.append("Insufficient price history for reliable trend analysis.")
     if intelligence.get("freshness") and "stale" in intelligence.get("freshness", ""):
         limitations.append("Price data is stale; recommendation may be less reliable.")
-    limitations.append("Demand signal uses neutral placeholder; update when Demand Radar is available.")
+    if demand_signal.get("num_demands", 0) == 0:
+        limitations.append("No active demand data for this commodity; demand contribution is 0.")
+    else:
+        limitations.append("Demand signal reflects live active Demand records (see Demand Radar).")
 
     return {
         "commodity_id": commodity_id,
@@ -271,6 +283,7 @@ def calculate_sale_window_score(
                 "storage_access": STORAGE_ACCESS_WEIGHT,
             },
             "trend_method": "Recent 7-day avg vs previous 7-day avg modal price",
-            "demand_placeholder": True,
+            "demand_placeholder": False,
+            "demand_signal": round(demand_signal.get("score", 0.0), 1),
         },
     }

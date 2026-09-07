@@ -17,7 +17,6 @@ export interface StatusStepsProps {
 export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) => {
   return (
     <div className={cn('w-full', className)}>
-      {/* Desktop / Tablet: Horizontal Layout */}
       <div className="hidden sm:flex items-center justify-between w-full">
         {steps.map((step, idx) => {
           const isComplete = step.status === 'complete';
@@ -27,15 +26,14 @@ export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) =>
           return (
             <React.Fragment key={step.id}>
               <div className="flex flex-col items-center text-center max-w-[140px]">
-                {/* Step Circle */}
                 <div
                   className={cn(
                     'w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-xs select-none transition-all',
-                    isComplete && 'bg-[#2FBF8F] text-[#0A0B1C]',
+                    isComplete && 'bg-status-success text-background',
                     isCurrent &&
-                      'bg-[#C4FF4D] text-[#0A0B1C] ring-4 ring-[#C4FF4D]/20 lime-glow',
+                      'bg-accent text-background ring-4 ring-accent/20',
                     step.status === 'pending' &&
-                      'bg-[#1D1F3D] text-[#A7ABC9] border border-[#5B5E8C]/40'
+                      'bg-surface-raised text-text-muted border border-border'
                   )}
                 >
                   {isComplete ? (
@@ -45,29 +43,27 @@ export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) =>
                   )}
                 </div>
 
-                {/* Label */}
                 <span
                   className={cn(
                     'mt-2 text-xs font-medium tracking-tight',
-                    isCurrent ? 'text-[#C4FF4D] font-semibold' : isComplete ? 'text-[#EEF0FA]' : 'text-[#A7ABC9]'
+                    isCurrent ? 'text-accent font-semibold' : isComplete ? 'text-text-main' : 'text-text-muted'
                   )}
                 >
                   {step.label}
                 </span>
 
                 {step.sublabel && (
-                  <span className="text-[10px] font-mono text-[#A7ABC9] mt-0.5">
+                  <span className="text-[10px] font-mono text-text-muted mt-0.5">
                     {step.sublabel}
                   </span>
                 )}
               </div>
 
-              {/* Connecting Bar */}
               {!isLast && (
                 <div
                   className={cn(
                     'flex-1 h-0.5 mx-3 mb-6 transition-colors',
-                    isComplete ? 'bg-[#2FBF8F]' : 'bg-[#2C2B73]'
+                    isComplete ? 'bg-status-success' : 'bg-border'
                   )}
                 />
               )}
@@ -76,9 +72,8 @@ export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) =>
         })}
       </div>
 
-      {/* Mobile: Vertical Stepper */}
       <div className="sm:hidden space-y-4 pl-4 relative">
-        <div className="absolute top-3 bottom-3 left-[27px] w-0.5 bg-[#2C2B73]" />
+        <div className="absolute top-3 bottom-3 left-[27px] w-0.5 bg-border" />
 
         {steps.map((step, idx) => {
           const isComplete = step.status === 'complete';
@@ -89,11 +84,11 @@ export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) =>
               <div
                 className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center font-mono font-bold text-xs shrink-0 select-none z-10',
-                  isComplete && 'bg-[#2FBF8F] text-[#0A0B1C]',
+                  isComplete && 'bg-status-success text-background',
                   isCurrent &&
-                    'bg-[#C4FF4D] text-[#0A0B1C] ring-4 ring-[#C4FF4D]/20 lime-glow',
+                    'bg-accent text-background ring-4 ring-accent/20',
                   step.status === 'pending' &&
-                    'bg-[#1D1F3D] text-[#A7ABC9] border border-[#5B5E8C]/40'
+                    'bg-surface-raised text-text-muted border border-border'
                 )}
               >
                 {isComplete ? (
@@ -107,13 +102,13 @@ export const StatusSteps: React.FC<StatusStepsProps> = ({ steps, className }) =>
                 <div
                   className={cn(
                     'text-xs font-medium',
-                    isCurrent ? 'text-[#C4FF4D] font-semibold' : isComplete ? 'text-[#EEF0FA]' : 'text-[#A7ABC9]'
+                    isCurrent ? 'text-accent font-semibold' : isComplete ? 'text-text-main' : 'text-text-muted'
                   )}
                 >
                   {step.label}
                 </div>
                 {step.sublabel && (
-                  <div className="text-[10px] font-mono text-[#A7ABC9]">
+                  <div className="text-[10px] font-mono text-text-muted">
                     {step.sublabel}
                   </div>
                 )}

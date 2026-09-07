@@ -18,19 +18,30 @@ from app.models.market import Market
 from app.models.market_price import MarketPrice
 from app.models.produce_lot import ProduceLot
 from app.models.storage_option import StorageOption
+from app.utils.auth import hash_password
 
 
 def seed_users(db: Session) -> dict[str, User]:
-    users = {
-        "farmer_1": User(name="Ramesh Patil", phone="+919876543210", role=UserRole.farmer, is_active=True),
-        "fpo_manager_1": User(name="Sunita Jadhav", phone="+919876543211", role=UserRole.fpo_manager, is_active=True),
-        "buyer_1": User(name="Anand Kumar", phone="+919876543212", role=UserRole.buyer, is_active=True),
-        "field_agent_1": User(name="Priya Deshmukh", phone="+919876543213", role=UserRole.field_agent, is_active=True),
-        "admin_1": User(name="Admin User", phone="+919876543214", role=UserRole.admin, is_active=True),
+    demo_password = hash_password("demo-password")
+    demo_users = {
+        "farmer_1": User(name="Ramesh Patil", phone="+919876543210", role=UserRole.farmer, is_active=True, password_hash=demo_password),
+        "fpo_manager_1": User(name="Sunita Jadhav", phone="+919876543211", role=UserRole.fpo_manager, is_active=True, password_hash=demo_password),
+        "buyer_1": User(name="Anand Kumar", phone="+919876543212", role=UserRole.buyer, is_active=True, password_hash=demo_password),
+        "field_agent_1": User(name="Priya Deshmukh", phone="+919876543213", role=UserRole.field_agent, is_active=True, password_hash=demo_password),
+        "admin_1": User(name="Admin User", phone="+919876543214", role=UserRole.admin, is_active=True, password_hash=demo_password),
     }
-    db.add_all(users.values())
+    for key, user in demo_users.items():
+        existing = db.query(User).filter(User.phone == user.phone).first()
+        if existing:
+            existing.name = user.name
+            existing.role = user.role
+            existing.is_active = user.is_active
+            existing.password_hash = user.password_hash
+            demo_users[key] = existing
+        else:
+            db.add(user)
     db.flush()
-    return users
+    return demo_users
 
 
 def seed_farmers(db: Session, users: dict[str, User]) -> dict[str, Farmer]:

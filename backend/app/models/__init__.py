@@ -10,6 +10,14 @@ from .commodity import Commodity
 from .market import Market
 from .market_price import MarketPrice
 from .storage_option import StorageOption
+from .demand import Demand
+from .offer import Offer, OfferHistory
+from .transaction import Transaction
+from .shipment import Shipment
+from .payment import Payment
+from .dispute import Dispute
+from .dispute_evidence import DisputeEvidence
+from .audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -22,4 +30,13 @@ __all__ = [
     "Market",
     "MarketPrice",
     "StorageOption",
+    "Demand",
+    "Offer",
+    "OfferHistory",
+    "Transaction",
+    "Shipment",
+    "Payment",
+    "Dispute",
+    "DisputeEvidence",
+    "AuditLog",
 ]

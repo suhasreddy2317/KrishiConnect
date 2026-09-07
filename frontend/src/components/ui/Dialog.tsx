@@ -55,26 +55,23 @@ export const Dialog: React.FC<DialogProps> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
     >
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#0A0B1C]/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-text-main/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Surface: Topsoil (#1D1F3D) */}
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-[#1D1F3D] border border-[#5B5E8C]/40 text-[#EEF0FA] shadow-2xl p-6 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150',
+          'relative w-full rounded-2xl bg-surface border border-border text-text-main shadow-2xl p-6 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150',
           maxWidthStyles[maxWidth]
         )}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between pb-4 mb-4 border-b border-[#2C2B73]">
+        <div className="flex items-start justify-between pb-4 mb-4 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-[#EEF0FA]">{title}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-text-main">{title}</h2>
             {description && (
-              <p className="text-xs text-[#A7ABC9] mt-1">{description}</p>
+              <p className="text-xs text-text-muted mt-1">{description}</p>
             )}
           </div>
           <IconButton
@@ -85,12 +82,10 @@ export const Dialog: React.FC<DialogProps> = ({
           />
         </div>
 
-        {/* Content */}
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">{children}</div>
 
-        {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 pt-4 mt-6 border-t border-[#2C2B73]">
+          <div className="flex items-center justify-end gap-3 pt-4 mt-6 border-t border-border">
             {footer}
           </div>
         )}

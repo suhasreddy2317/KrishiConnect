@@ -27,15 +27,15 @@ export function Table<T>({
   className,
 }: TableProps<T>) {
   return (
-    <div className={cn('w-full overflow-x-auto rounded-xl border border-[#2C2B73] bg-[#14152E]', className)}>
+    <div className={cn('w-full overflow-x-auto rounded-xl border border-border bg-surface', className)}>
       <table className="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
-          <tr className="border-b border-[#2C2B73] bg-[#1D1F3D]/80">
+          <tr className="border-b border-border bg-surface-raised/80">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  'py-3.5 px-4 font-semibold text-[#A7ABC9] tracking-wider uppercase text-[11px]',
+                  'py-3.5 px-4 font-semibold text-text-muted tracking-wider uppercase text-[11px]',
                   col.align === 'right' || col.isNumeric ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                 )}
               >
@@ -44,12 +44,12 @@ export function Table<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#2C2B73]/60">
+        <tbody className="divide-y divide-border/60">
           {data.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
-                className="py-8 text-center text-[#A7ABC9] text-xs font-mono"
+                className="py-8 text-center text-text-muted text-xs font-mono"
               >
                 {emptyMessage}
               </td>
@@ -64,8 +64,8 @@ export function Table<T>({
                   className={cn(
                     'transition-colors',
                     onRowClick
-                      ? 'cursor-pointer hover:bg-[#1D1F3D] active:bg-[#2C2B73]/40'
-                      : 'hover:bg-[#1D1F3D]/50'
+                      ? 'cursor-pointer hover:bg-surface-raised active:bg-border/40'
+                      : 'hover:bg-surface-raised/50'
                   )}
                 >
                   {columns.map((col) => {
@@ -74,7 +74,7 @@ export function Table<T>({
                       <td
                         key={`${rowKey}-${col.key}`}
                         className={cn(
-                          'py-3.5 px-4 text-[#EEF0FA]',
+                          'py-3.5 px-4 text-text-main',
                           col.isNumeric && 'font-mono-data',
                           col.align === 'right' || col.isNumeric ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                         )}

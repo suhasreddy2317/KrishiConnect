@@ -22,38 +22,38 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
     Synced: {
       label: 'Synced',
       icon: Check,
-      color: 'text-[#2FBF8F]',
-      bg: 'bg-[#2FBF8F]/10',
-      border: 'border-[#2FBF8F]/30',
+      color: 'text-status-success',
+      bg: 'bg-status-success/10',
+      border: 'border-status-success/30',
     },
     Syncing: {
       label: 'Syncing...',
       icon: RefreshCw,
-      color: 'text-[#C4FF4D]',
-      bg: 'bg-[#C4FF4D]/10',
-      border: 'border-[#C4FF4D]/30',
+      color: 'text-accent',
+      bg: 'bg-accent/10',
+      border: 'border-accent/30',
       spin: true,
     },
     Offline: {
       label: 'Offline Mode',
       icon: WifiOff,
-      color: 'text-[#F5A623]',
-      bg: 'bg-[#F5A623]/10',
-      border: 'border-[#F5A623]/30',
+      color: 'text-status-warning',
+      bg: 'bg-status-warning/10',
+      border: 'border-status-warning/30',
     },
     'Pending Upload': {
       label: 'Pending Upload (Local)',
       icon: UploadCloud,
-      color: 'text-[#A7ABC9]',
-      bg: 'bg-[#5B5E8C]/20',
-      border: 'border-[#5B5E8C]/40',
+      color: 'text-text-muted',
+      bg: 'bg-surface-raised',
+      border: 'border-border',
     },
     Failed: {
       label: 'Sync Failed',
       icon: AlertCircle,
-      color: 'text-[#E5484D]',
-      bg: 'bg-[#E5484D]/10',
-      border: 'border-[#E5484D]/30',
+      color: 'text-status-error',
+      bg: 'bg-status-error/10',
+      border: 'border-status-error/30',
     },
   };
 
@@ -73,7 +73,7 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
       <Icon className={cn('w-3.5 h-3.5', config.color, config.spin && 'animate-spin')} />
       <span className={cn('font-medium', config.color)}>{config.label}</span>
       {lastSyncedTime && (
-        <span className="text-[#A7ABC9] text-[11px] hidden sm:inline">
+        <span className="text-text-muted text-[11px] hidden sm:inline">
           ({lastSyncedTime})
         </span>
       )}

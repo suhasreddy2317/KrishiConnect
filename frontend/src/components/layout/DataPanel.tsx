@@ -22,34 +22,31 @@ export const DataPanel: React.FC<DataPanelProps> = ({
   return (
     <div
       className={cn(
-        'rounded-xl bg-[#14152E] border border-[#2C2B73] overflow-hidden flex flex-col',
+        'rounded-xl bg-surface border border-border overflow-hidden flex flex-col',
         className
       )}
       {...props}
     >
-      {/* Header bar */}
-      <div className="p-4 sm:p-5 border-b border-[#2C2B73] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1D1F3D]/40">
+      <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-raised/40">
         <div>
           <div className="flex items-center space-x-2">
-            <h3 className="text-base font-semibold text-[#EEF0FA] tracking-tight">
+            <h3 className="text-base font-semibold text-text-main tracking-tight">
               {title}
             </h3>
             {badge}
           </div>
           {subtitle && (
-            <p className="text-xs text-[#A7ABC9] mt-0.5">{subtitle}</p>
+            <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
           )}
         </div>
 
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
 
-      {/* Body */}
       <div className="p-4 sm:p-5 flex-1">{children}</div>
 
-      {/* Footer */}
       {footer && (
-        <div className="p-3 sm:px-5 border-t border-[#2C2B73] bg-[#1D1F3D]/30 flex items-center justify-between text-xs text-[#A7ABC9]">
+        <div className="p-3 sm:px-5 border-t border-border bg-surface-raised/30 flex items-center justify-between text-xs text-text-muted">
           {footer}
         </div>
       )}

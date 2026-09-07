@@ -3,12 +3,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.api_router import api_router
+from app.db.session import SessionLocal
+from app.services.transactions import reconcile_missing_payments
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Database schema is managed by Alembic migrations.
-    # Run `alembic upgrade head` before starting the application.
+    db = SessionLocal()
+    try:
+        reconcile_missing_payments(db)
+        db.commit()
+    finally:
+        db.close()
     yield
 
 

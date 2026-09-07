@@ -25,7 +25,7 @@ export const Tabs: React.FC<TabsProps> = ({
     <div
       role="tablist"
       className={cn(
-        'flex items-center space-x-1 border-b border-[#2C2B73] overflow-x-auto no-scrollbar',
+        'flex items-center space-x-1 border-b border-border overflow-x-auto no-scrollbar',
         className
       )}
     >
@@ -38,10 +38,10 @@ export const Tabs: React.FC<TabsProps> = ({
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'flex items-center space-x-2 px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4FF4D]',
+              'flex items-center space-x-2 px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               isActive
-                ? 'border-[#C4FF4D] text-[#C4FF4D] bg-[#14152E]/50'
-                : 'border-transparent text-[#A7ABC9] hover:text-[#EEF0FA] hover:bg-[#14152E]/30'
+                ? 'border-accent text-accent bg-surface/50'
+                : 'border-transparent text-text-muted hover:text-text-main hover:bg-surface-raised/50'
             )}
           >
             {tab.icon}
@@ -51,8 +51,8 @@ export const Tabs: React.FC<TabsProps> = ({
                 className={cn(
                   'font-mono text-[11px] px-1.5 py-0.2 rounded-full border',
                   isActive
-                    ? 'bg-[#C4FF4D]/15 border-[#C4FF4D]/40 text-[#C4FF4D]'
-                    : 'bg-[#1D1F3D] border-[#5B5E8C]/30 text-[#A7ABC9]'
+                    ? 'bg-accent/15 border-accent/40 text-accent'
+                    : 'bg-surface-raised border-border text-text-muted'
                 )}
               >
                 {tab.count}

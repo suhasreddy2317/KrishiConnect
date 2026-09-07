@@ -37,49 +37,46 @@ export const MobileDataCard: React.FC<MobileDataCardProps> = ({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       className={cn(
-        'w-full rounded-xl bg-[#14152E] border border-[#2C2B73] p-4 transition-all',
-        onClick && 'cursor-pointer hover:border-[#5B5E8C] active:scale-[0.99]',
+        'w-full rounded-xl bg-surface border border-border p-4 transition-all',
+        onClick && 'cursor-pointer hover:border-primary active:scale-[0.99]',
         className
       )}
     >
-      {/* Top row: Title and Status Badge */}
-      <div className="flex items-start justify-between gap-2 pb-3 border-b border-[#2C2B73]/60">
+      <div className="flex items-start justify-between gap-2 pb-3 border-b border-border">
         <div>
-          <h3 className="text-sm font-semibold text-[#EEF0FA] leading-tight">
+          <h3 className="text-sm font-semibold text-text-main leading-tight">
             {title}
           </h3>
           {subtitle && (
-            <p className="text-xs text-[#A7ABC9] mt-0.5">{subtitle}</p>
+            <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
           )}
         </div>
         {statusBadge && <div className="shrink-0">{statusBadge}</div>}
       </div>
 
-      {/* Center row: Primary Value Highlight */}
       {primaryValue && (
-        <div className="my-3 p-3 rounded-lg bg-[#1D1F3D] flex items-center justify-between">
-          <span className="text-xs text-[#A7ABC9]">
+        <div className="my-3 p-3 rounded-lg bg-surface-raised flex items-center justify-between">
+          <span className="text-xs text-text-muted">
             {primaryValue.label || 'Primary Value'}
           </span>
           <div className="flex items-baseline space-x-1 font-mono-data">
-            <span className="text-lg font-bold text-[#C4FF4D]">
+            <span className="text-lg font-bold text-accent">
               {primaryValue.value}
             </span>
             {primaryValue.unit && (
-              <span className="text-xs text-[#EEF0FA]">{primaryValue.unit}</span>
+              <span className="text-xs text-text-main">{primaryValue.unit}</span>
             )}
           </div>
         </div>
       )}
 
-      {/* Bottom Key-Value Grid */}
       <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
         {details.map((item, idx) => (
           <div key={idx} className="space-y-0.5">
-            <span className="text-[#A7ABC9] text-[11px] block">{item.label}</span>
+            <span className="text-text-muted text-[11px] block">{item.label}</span>
             <span
               className={cn(
-                'text-[#EEF0FA] font-medium block',
+                'text-text-main font-medium block',
                 item.isNumeric && 'font-mono-data'
               )}
             >
@@ -90,7 +87,7 @@ export const MobileDataCard: React.FC<MobileDataCardProps> = ({
       </div>
 
       {onClick && (
-        <div className="mt-3 pt-2.5 border-t border-[#2C2B73]/50 flex items-center justify-between text-xs text-[#C4FF4D] font-medium">
+        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-xs text-accent font-medium">
           <span>View full details</span>
           <ChevronRight className="w-4 h-4" />
         </div>

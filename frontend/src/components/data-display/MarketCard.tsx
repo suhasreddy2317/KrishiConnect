@@ -8,9 +8,9 @@ export interface MarketCardProps {
   mandiName: string;
   distanceKm: number;
   commodity: string;
-  modalPrice: number; // in ₹/qtl
-  trendPercentage: number; // e.g. +3.4 or -1.2
-  estimatedFreightPerQtl?: number; // transport cost
+  modalPrice: number;
+  trendPercentage: number;
+  estimatedFreightPerQtl?: number;
   source?: string;
   timestamp: string;
   isNearest?: boolean;
@@ -41,47 +41,45 @@ export const MarketCard: React.FC<MarketCardProps> = ({
   return (
     <div
       className={cn(
-        'rounded-xl bg-[#14152E] border p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-[#5B5E8C]',
+        'rounded-xl bg-surface border p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-primary',
         isBestRealized
-          ? 'border-[#C4FF4D]/60 ring-1 ring-[#C4FF4D]/30'
-          : 'border-[#2C2B73]',
+          ? 'border-accent/60 ring-1 ring-accent/30'
+          : 'border-border',
         className
       )}
     >
-      {/* Top Header Row */}
-      <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#2C2B73]/60">
+      <div className="flex items-start justify-between gap-3 pb-3 border-b border-border">
         <div>
           <div className="flex items-center space-x-2">
-            <h3 className="text-base font-semibold text-[#EEF0FA] tracking-tight">
+            <h3 className="text-base font-semibold text-text-main tracking-tight">
               {mandiName}
             </h3>
             {isBestRealized && (
-              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.2 rounded-full bg-[#C4FF4D]/15 text-[#C4FF4D] border border-[#C4FF4D]/40 font-bold">
+              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.2 rounded-full bg-accent/15 text-accent border border-accent/40 font-bold">
                 Best Net Price
               </span>
             )}
             {isNearest && !isBestRealized && (
-              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.2 rounded-full bg-[#1D1F3D] text-[#A7ABC9] border border-[#5B5E8C]/30">
+              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.2 rounded-full bg-surface-raised text-text-muted border border-border">
                 Nearest
               </span>
             )}
           </div>
 
-          <div className="flex items-center space-x-2 text-xs text-[#A7ABC9] mt-1">
-            <MapPin className="w-3.5 h-3.5 text-[#5B5E8C]" />
+          <div className="flex items-center space-x-2 text-xs text-text-muted mt-1">
+            <MapPin className="w-3.5 h-3.5 text-text-muted" />
             <span className="font-mono">{distanceKm} km away</span>
             <span>•</span>
             <span>{commodity}</span>
           </div>
         </div>
 
-        {/* 7-Day Trend Pill */}
         <div
           className={cn(
-            'flex items-center space-x-1 px-2 py-1 rounded font-mono text-xs font-semibold shrink-0',
+            'flex items-center space-x-1 px-2 py-1 rounded font-mono text-xs font-semibold shrink-0 border',
             isTrendUp
-              ? 'bg-[#2FBF8F]/15 text-[#2FBF8F] border border-[#2FBF8F]/30'
-              : 'bg-[#E5484D]/15 text-[#E5484D] border border-[#E5484D]/30'
+              ? 'bg-status-success/15 text-status-success border-status-success/30'
+              : 'bg-status-error/15 text-status-error border-status-error/30'
           )}
         >
           {isTrendUp ? (
@@ -93,31 +91,29 @@ export const MarketCard: React.FC<MarketCardProps> = ({
         </div>
       </div>
 
-      {/* Center Price Display */}
-      <div className="my-4 p-3 rounded-lg bg-[#1D1F3D] flex items-center justify-between">
+      <div className="my-4 p-3 rounded-lg bg-surface-raised flex items-center justify-between">
         <div>
-          <div className="text-[11px] text-[#A7ABC9]">
+          <div className="text-[11px] text-text-muted">
             {showNetPrice ? 'Net Realized (After Freight)' : 'Modal Mandi Price'}
           </div>
           <div className="flex items-baseline space-x-1.5 font-mono-data mt-0.5">
-            <span className="text-2xl font-bold text-[#EEF0FA]">
+            <span className="text-2xl font-bold text-text-main">
               ₹{(showNetPrice ? netRealizedPrice : modalPrice).toLocaleString('en-IN')}
             </span>
-            <span className="text-xs text-[#A7ABC9]">/ quintal</span>
+            <span className="text-xs text-text-muted">/ quintal</span>
           </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowNetPrice(!showNetPrice)}
-          className="text-xs font-mono text-[#C4FF4D] hover:underline flex items-center space-x-1 px-2 py-1 rounded bg-[#2C2B73]/60 border border-[#5B5E8C]/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C4FF4D]"
+          className="text-xs font-mono text-accent hover:underline flex items-center space-x-1 px-2 py-1 rounded bg-border/60 border border-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
         >
           <Truck className="w-3 h-3" />
           <span>{showNetPrice ? 'Show Gross' : 'Deduct Freight (-₹75)'}</span>
         </button>
       </div>
 
-      {/* Footer Info & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <DataFreshness timestamp={timestamp} source={source} />
 

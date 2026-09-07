@@ -31,16 +31,16 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
 
   const statusColors = {
-    online: 'bg-[#2FBF8F]',
-    offline: 'bg-[#5B5E8C]',
-    busy: 'bg-[#F5A623]',
+    online: 'bg-status-success',
+    offline: 'bg-text-muted',
+    busy: 'bg-status-warning',
   };
 
   return (
     <div className="relative inline-flex shrink-0">
       <div
         className={cn(
-          'rounded-md bg-[#2C2B73] border border-[#5B5E8C]/50 flex items-center justify-center font-mono font-semibold text-[#EEF0FA] select-none',
+          'rounded-md bg-primary border border-border flex items-center justify-center font-mono font-semibold text-white select-none',
           sizeStyles[size],
           className
         )}
@@ -52,7 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       {status && (
         <span
           className={cn(
-            'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0A0B1C]',
+            'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background',
             statusColors[status]
           )}
         />

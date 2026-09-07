@@ -19,12 +19,12 @@ export const Badge: React.FC<BadgeProps> = ({
     'inline-flex items-center font-mono uppercase tracking-wider rounded-full border select-none font-semibold';
 
   const variantStyles = {
-    default: 'bg-[#1D1F3D] border-[#5B5E8C]/40 text-[#A7ABC9]',
-    trust: 'bg-[#2FBF8F]/15 border-[#2FBF8F]/40 text-[#2FBF8F]',
-    warning: 'bg-[#F5A623]/15 border-[#F5A623]/40 text-[#F5A623]',
-    error: 'bg-[#E5484D]/15 border-[#E5484D]/40 text-[#E5484D]',
-    lime: 'bg-[#C4FF4D]/15 border-[#C4FF4D]/50 text-[#C4FF4D]',
-    outline: 'bg-transparent border-[#5B5E8C]/60 text-[#EEF0FA]',
+    default: 'bg-surface-raised border-border text-text-muted',
+    trust: 'bg-status-success/15 border-status-success/40 text-status-success',
+    warning: 'bg-status-warning/15 border-status-warning/40 text-status-warning',
+    error: 'bg-status-error/15 border-status-error/40 text-status-error',
+    lime: 'bg-accent/15 border-accent/40 text-accent',
+    outline: 'bg-transparent border-border text-text-main',
   };
 
   const sizeStyles = {

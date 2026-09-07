@@ -9,43 +9,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Trust Ledger Design Tokens
-        brand: {
-          primary: '#2C2B73',
-          'primary-hover': '#3A38A0',
-          secondary: '#5B5E8C',
-          lime: '#C4FF4D',
-          'lime-active': '#AEE83A',
-        },
-        bg: {
-          base: '#0A0B1C',
-          surface: '#14152E',
-          raised: '#1D1F3D',
-        },
-        text: {
-          main: '#EEF0FA',
-          muted: '#A7ABC9',
-        },
-        status: {
-          trust: '#2FBF8F',
-          success: '#2FBF8F',
-          warning: '#F5A623',
-          error: '#E5484D',
-        },
-        // Semantic mappings
-        background: '#0A0B1C',
-        surface: '#14152E',
-        'surface-raised': '#1D1F3D',
+        background: 'rgb(var(--background) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-raised': 'rgb(var(--surface-raised) / <alpha-value>)',
+        'text-main': 'rgb(var(--text-main) / <alpha-value>)',
+        'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
         primary: {
-          DEFAULT: '#2C2B73',
-          hover: '#3A38A0',
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          hover: 'rgb(var(--primary-hover) / <alpha-value>)',
         },
-        secondary: '#5B5E8C',
         accent: {
-          DEFAULT: '#C4FF4D',
-          active: '#AEE83A',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
         },
-        muted: '#A7ABC9',
+        'focus-ring': 'rgb(var(--focus-ring) / <alpha-value>)',
+        'status-success': '#16A34A',
+        'status-warning': '#D97706',
+        'status-error': '#DC2626',
+        'status-info': '#2563EB',
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'sans-serif'],
@@ -61,4 +42,3 @@ export default {
   },
   plugins: [],
 } satisfies Config;
-

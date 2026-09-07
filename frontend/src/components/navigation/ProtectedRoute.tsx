@@ -12,8 +12,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0B1C] flex items-center justify-center">
-        <div className="text-[#A7ABC9] text-sm">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-text-muted text-sm">Loading...</div>
       </div>
     );
   }
@@ -24,8 +24,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return (
-      <div className="min-h-screen bg-[#0A0B1C] flex items-center justify-center">
-        <div className="text-[#E5484D] text-sm">You do not have permission to access this page.</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-status-error text-sm">You do not have permission to access this page.</div>
       </div>
     );
   }

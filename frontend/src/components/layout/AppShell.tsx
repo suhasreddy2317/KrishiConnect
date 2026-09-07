@@ -25,7 +25,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Detect current role from URL pathname
   const detectRole = (): UserRole => {
     if (forcedRole) return forcedRole;
     const path = location.pathname;
@@ -34,16 +33,21 @@ export const AppShell: React.FC<AppShellProps> = ({
     if (path.startsWith('/buyer')) return 'buyer';
     if (path.startsWith('/field-agent')) return 'field-agent';
     if (path.startsWith('/admin')) return 'admin';
-    return 'farmer'; // default
+    return 'farmer';
   };
 
   const currentRole = detectRole();
   const roleConfig = ROLE_CONFIGS[currentRole];
   const isFarmer = currentRole === 'farmer';
+  const palette = roleConfig.palette;
 
   return (
-    <div className="min-h-screen flex bg-[#0A0B1C] text-[#EEF0FA]">
-      {/* Desktop & Tablet Sidebar */}
+    <div
+      data-role={currentRole}
+      className={cn(
+        'min-h-screen flex bg-background text-text-main',
+      )}
+    >
       <Sidebar
         currentRole={currentRole}
         activeSubTab={activeSubTab}
@@ -53,9 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         }}
       />
 
-      {/* Main Content Column */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
         <TopHeader
           currentRole={currentRole}
           title={roleConfig.title}
@@ -63,7 +65,6 @@ export const AppShell: React.FC<AppShellProps> = ({
           onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
 
-        {/* Page Content Body (adds bottom padding on mobile if Farmer bottom nav is shown) */}
         <main
           className={cn(
             'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6',
@@ -73,23 +74,21 @@ export const AppShell: React.FC<AppShellProps> = ({
           {children || <Outlet />}
         </main>
 
-        {/* Global Compact Footer */}
-        <footer className="border-t border-[#2C2B73]/60 bg-[#0A0B1C] py-4 text-xs text-[#A7ABC9] px-4 sm:px-6 lg:px-8 hidden md:block">
+        <footer className="border-t border-border bg-background py-4 text-xs text-text-muted px-4 sm:px-6 lg:px-8 hidden md:block">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Activity className="w-3.5 h-3.5 text-[#2FBF8F]" />
+              <Activity className="w-3.5 h-3.5 text-status-success" />
               <span>KrishiConnect • Trust Ledger Operating System</span>
             </div>
             <div className="font-mono text-[11px] flex items-center space-x-4">
               <span>Theme: Trust Ledger</span>
               <span>•</span>
-              <span className="text-[#C4FF4D]">Phase 1 Foundation</span>
+              <span style={{ color: palette.accent }}>{roleConfig.shortName} Phase 1</span>
             </div>
           </div>
         </footer>
       </div>
 
-      {/* Mobile Drawer Navigation for non-farmer roles or all roles */}
       <Drawer
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -98,7 +97,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         position="right"
       >
         <div className="space-y-4">
-          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-[#A7ABC9] border-b border-[#2C2B73]">
+          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-text-muted border-b border-border">
             Destinations
           </div>
 
@@ -110,8 +109,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                 cn(
                   'w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                   isActive
-                    ? 'bg-[#2C2B73] text-[#C4FF4D] font-semibold'
-                    : 'text-[#EEF0FA] hover:bg-[#14152E]'
+                    ? 'bg-primary text-accent font-semibold'
+                    : 'text-text-main hover:bg-surface-raised'
                 )
               }
             >
@@ -133,16 +132,16 @@ export const AppShell: React.FC<AppShellProps> = ({
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors text-left',
                     isSelected
-                      ? 'bg-[#2C2B73] text-[#C4FF4D] font-semibold'
-                      : 'text-[#EEF0FA] hover:bg-[#14152E]'
+                      ? 'bg-primary text-accent font-semibold'
+                      : 'text-text-main hover:bg-surface-raised'
                   )}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4 text-[#C4FF4D]" />
+                    <Icon className="w-4 h-4" style={{ color: isSelected ? palette.accent : undefined }} />
                     <span>{item.name}</span>
                   </div>
                   {item.badge && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#14152E] text-[#A7ABC9]">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-raised text-text-muted">
                       {item.badge}
                     </span>
                   )}
@@ -153,7 +152,6 @@ export const AppShell: React.FC<AppShellProps> = ({
         </div>
       </Drawer>
 
-      {/* Mobile Sticky Bottom Nav for Farmer (4–5 destinations max) */}
       {isFarmer && roleConfig.bottomNavItems && (
         <BottomNav
           items={roleConfig.bottomNavItems}

@@ -42,52 +42,52 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     'verified-buyer': {
       defaultLabel: 'Verified Buyer',
       icon: ShieldCheck,
-      colorClasses: 'bg-[#2FBF8F]/15 border-[#2FBF8F]/50 text-[#2FBF8F]',
+      colorClasses: 'bg-status-success/15 border-status-success/50 text-status-success',
     },
     'kyc-verified': {
       defaultLabel: 'KYC Verified',
       icon: CheckCircle2,
-      colorClasses: 'bg-[#2FBF8F]/15 border-[#2FBF8F]/50 text-[#2FBF8F]',
+      colorClasses: 'bg-status-success/15 border-status-success/50 text-status-success',
     },
     trusted: {
       defaultLabel: 'High Trust',
       icon: Award,
-      colorClasses: 'bg-[#2FBF8F]/15 border-[#2FBF8F]/50 text-[#2FBF8F]',
+      colorClasses: 'bg-status-success/15 border-status-success/50 text-status-success',
     },
     'pending-verification': {
       defaultLabel: 'Pending Review',
       icon: Clock,
-      colorClasses: 'bg-[#F5A623]/15 border-[#F5A623]/50 text-[#F5A623]',
+      colorClasses: 'bg-status-warning/15 border-status-warning/50 text-status-warning',
     },
     warning: {
       defaultLabel: 'Action Required',
       icon: AlertTriangle,
-      colorClasses: 'bg-[#F5A623]/15 border-[#F5A623]/50 text-[#F5A623]',
+      colorClasses: 'bg-status-warning/15 border-status-warning/50 text-status-warning',
     },
     dispute: {
       defaultLabel: 'Dispute Open',
       icon: AlertOctagon,
-      colorClasses: 'bg-[#E5484D]/15 border-[#E5484D]/50 text-[#E5484D]',
+      colorClasses: 'bg-status-error/15 border-status-error/50 text-status-error',
     },
     'sync-pending': {
       defaultLabel: 'Sync Pending',
       icon: RefreshCw,
-      colorClasses: 'bg-[#5B5E8C]/20 border-[#5B5E8C]/50 text-[#A7ABC9]',
+      colorClasses: 'bg-surface-raised border-border text-text-muted',
     },
     grade: {
       defaultLabel: 'Grade A',
       icon: Award,
-      colorClasses: 'bg-[#1D1F3D] border-[#5B5E8C]/40 text-[#EEF0FA]',
+      colorClasses: 'bg-surface-raised border-border text-text-main',
     },
     active: {
       defaultLabel: 'Live / Active',
       icon: Clock,
-      colorClasses: 'bg-[#C4FF4D]/15 border-[#C4FF4D]/50 text-[#C4FF4D]',
+      colorClasses: 'bg-accent/15 border-accent/50 text-accent',
     },
     completed: {
       defaultLabel: 'Settled',
       icon: CheckCircle2,
-      colorClasses: 'bg-[#2FBF8F]/15 border-[#2FBF8F]/50 text-[#2FBF8F]',
+      colorClasses: 'bg-status-success/15 border-status-success/50 text-status-success',
     },
   };
 

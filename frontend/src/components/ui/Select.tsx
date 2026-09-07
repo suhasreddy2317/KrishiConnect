@@ -36,7 +36,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-xs font-medium text-[#EEF0FA] tracking-wide"
+            className="block text-xs font-medium text-text-main tracking-wide"
           >
             {label}
           </label>
@@ -48,11 +48,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              'w-full h-11 px-3 pr-10 bg-[#14152E] text-[#EEF0FA] text-sm rounded-md border appearance-none transition-all disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus:outline-none focus:border-[#C4FF4D] focus:ring-1 focus:ring-[#C4FF4D]',
+              'w-full h-11 px-3 pr-10 bg-surface text-text-main text-sm rounded-md border appearance-none transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+              'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
               error
-                ? 'border-[#E5484D] focus:border-[#E5484D] focus:ring-[#E5484D]'
-                : 'border-[#2C2B73] hover:border-[#5B5E8C]',
+                ? 'border-status-error focus:border-status-error focus:ring-status-error'
+                : 'border-border hover:border-primary',
               className
             )}
             {...props}
@@ -62,25 +62,25 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 key={opt.value}
                 value={opt.value}
                 disabled={opt.disabled}
-                className="bg-[#14152E] text-[#EEF0FA]"
+                className="bg-surface text-text-main"
               >
                 {opt.label}
               </option>
             ))}
           </select>
 
-          <div className="absolute right-3 text-[#A7ABC9] pointer-events-none flex items-center">
+          <div className="absolute right-3 text-text-muted pointer-events-none flex items-center">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
 
         {error ? (
-          <p className="flex items-center space-x-1 text-xs text-[#E5484D]">
+          <p className="flex items-center space-x-1 text-xs text-status-error">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{error}</span>
           </p>
         ) : helperText ? (
-          <p className="text-xs text-[#A7ABC9]">{helperText}</p>
+          <p className="text-xs text-text-muted">{helperText}</p>
         ) : null}
       </div>
     );

@@ -50,33 +50,29 @@ export const Drawer: React.FC<DrawerProps> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex"
     >
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#0A0B1C]/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-text-main/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Surface: Topsoil (#1D1F3D) */}
       <div
         className={cn(
-          'relative bg-[#1D1F3D] border-[#5B5E8C]/40 text-[#EEF0FA] shadow-2xl z-10 flex flex-col',
+          'relative bg-surface border-border text-text-main shadow-2xl z-10 flex flex-col',
           isBottom
             ? 'mt-auto w-full max-h-[85vh] rounded-t-2xl border-t p-6 animate-in slide-in-from-bottom duration-200'
             : 'ml-auto h-full w-full max-w-md border-l p-6 animate-in slide-in-from-right duration-200'
         )}
       >
-        {/* Drag handle for mobile bottom sheet */}
         {isBottom && (
-          <div className="w-12 h-1.5 bg-[#5B5E8C]/50 rounded-full mx-auto mb-4" />
+          <div className="w-12 h-1.5 bg-border rounded-full mx-auto mb-4" />
         )}
 
-        {/* Header */}
-        <div className="flex items-start justify-between pb-3 mb-3 border-b border-[#2C2B73]">
+        <div className="flex items-start justify-between pb-3 mb-3 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-[#EEF0FA]">{title}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-text-main">{title}</h2>
             {description && (
-              <p className="text-xs text-[#A7ABC9] mt-0.5">{description}</p>
+              <p className="text-xs text-text-muted mt-0.5">{description}</p>
             )}
           </div>
           <IconButton
@@ -87,12 +83,10 @@ export const Drawer: React.FC<DrawerProps> = ({
           />
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto space-y-4 py-2">{children}</div>
 
-        {/* Footer */}
         {footer && (
-          <div className="pt-4 mt-auto border-t border-[#2C2B73] flex items-center justify-end gap-3">
+          <div className="pt-4 mt-auto border-t border-border flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

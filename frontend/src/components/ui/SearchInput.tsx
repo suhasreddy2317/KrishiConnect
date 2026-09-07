@@ -12,7 +12,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
 
     return (
       <div className="relative flex items-center w-full">
-        <div className="absolute left-3 text-[#A7ABC9] pointer-events-none flex items-center">
+        <div className="absolute left-3 text-text-muted pointer-events-none flex items-center">
           <Search className="w-4 h-4" />
         </div>
 
@@ -24,8 +24,8 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           placeholder={placeholder}
           aria-label="Search"
           className={cn(
-            'w-full h-10 pl-9 pr-9 bg-[#14152E] text-[#EEF0FA] text-sm rounded-md border border-[#2C2B73] transition-all placeholder:text-[#5B5E8C]',
-            'hover:border-[#5B5E8C] focus:outline-none focus:border-[#C4FF4D] focus:ring-1 focus:ring-[#C4FF4D]',
+            'w-full h-10 pl-9 pr-9 bg-surface text-text-main text-sm rounded-md border border-border transition-all placeholder:text-text-muted',
+            'hover:border-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
             className
           )}
           {...props}
@@ -36,7 +36,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             type="button"
             onClick={onClear}
             aria-label="Clear search"
-            className="absolute right-3 text-[#A7ABC9] hover:text-[#EEF0FA] transition-colors p-0.5 rounded focus:outline-none focus:ring-1 focus:ring-[#C4FF4D]"
+            className="absolute right-3 text-text-muted hover:text-text-main transition-colors p-0.5 rounded focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <X className="w-3.5 h-3.5" />
           </button>

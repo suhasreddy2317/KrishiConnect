@@ -23,20 +23,20 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#2C2B73]/80',
+        'flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border',
         className
       )}
     >
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#EEF0FA]">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-main">
             {title}
           </h1>
           {roleBadge}
           {statusBadge}
         </div>
         {subtitle && (
-          <p className="text-xs sm:text-sm text-[#A7ABC9] max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-text-muted max-w-2xl leading-relaxed">
             {subtitle}
           </p>
         )}

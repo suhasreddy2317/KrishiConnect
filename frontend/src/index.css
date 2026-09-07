@@ -4,48 +4,106 @@
 
 @layer base {
   :root {
-    --background: 10 11 28;
-    --surface: 20 21 46;
-    --surface-raised: 29 31 61;
-    --primary: 44 43 115;
-    --accent: 196 255 77;
+    --background: 245 250 246;
+    --surface: 255 255 255;
+    --surface-raised: 234 245 236;
+    --text-main: 22 48 32;
+    --text-muted: 95 113 101;
+    --border: 207 227 211;
+    --primary: 22 101 52;
+    --primary-hover: 20 83 45;
+    --accent: 101 163 13;
+    --accent-soft: 220 252 231;
+    --focus-ring: 22 101 52;
+  }
+
+  [data-role='farmer'] {
+    --background: 243 250 244;
+    --surface: 255 255 255;
+    --surface-raised: 232 245 233;
+    --text-main: 27 42 29;
+    --text-muted: 95 111 97;
+    --border: 200 230 201;
+    --primary: 46 125 50;
+    --primary-hover: 39 104 43;
+    --accent: 102 187 106;
+    --focus-ring: 46 125 50;
+  }
+
+  [data-role='buyer'] {
+    --background: 243 248 254;
+    --surface: 255 255 255;
+    --surface-raised: 227 242 253;
+    --text-main: 23 32 51;
+    --text-muted: 92 107 122;
+    --border: 187 222 251;
+    --primary: 21 101 192;
+    --primary-hover: 18 86 170;
+    --accent: 100 181 246;
+    --focus-ring: 21 101 192;
+  }
+
+  [data-role='fpo'] {
+    --background: 255 247 240;
+    --surface: 255 255 255;
+    --surface-raised: 255 243 224;
+    --text-main: 43 33 27;
+    --text-muted: 111 98 90;
+    --border: 255 204 128;
+    --primary: 230 81 0;
+    --primary-hover: 192 68 0;
+    --accent: 255 152 0;
+    --focus-ring: 230 81 0;
+  }
+
+  [data-role='field-agent'] {
+    --background: 255 245 245;
+    --surface: 255 255 255;
+    --surface-raised: 255 235 238;
+    --text-main: 43 23 23;
+    --text-muted: 111 85 85;
+    --border: 255 205 210;
+    --primary: 198 40 40;
+    --primary-hover: 168 35 35;
+    --accent: 239 83 80;
+    --focus-ring: 198 40 40;
+  }
+
+  [data-role='admin'] {
+    --background: 250 247 245;
+    --surface: 255 255 255;
+    --surface-raised: 239 235 233;
+    --text-main: 41 33 30;
+    --text-muted: 102 90 85;
+    --border: 215 204 200;
+    --primary: 109 76 65;
+    --primary-hover: 92 64 55;
+    --accent: 141 110 99;
+    --focus-ring: 109 76 65;
   }
 
   body {
-    background-color: #0A0B1C;
-    color: #EEF0FA;
-    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    background-color: rgb(var(--background));
+    color: rgb(var(--text-main));
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
   }
 
-  /* Accessible focus outline */
   :focus-visible {
-    outline: 2px solid #C4FF4D;
+    outline: 2px solid rgb(var(--focus-ring));
     outline-offset: 2px;
   }
 }
 
-/* Large Text Accessibility Mode */
 html.text-size-lg {
-  font-size: 112.5%; /* 18px base instead of 16px */
+  font-size: 112.5%;
 }
 
-/* Tabular figures for numbers, currency, timestamps */
 .font-mono-data {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* Restrained Cyber Lime Glow for primary CTA */
-.lime-glow {
-  box-shadow: 0 0 14px rgba(196, 255, 77, 0.28);
-}
-
-.lime-glow-subtle {
-  box-shadow: 0 0 8px rgba(196, 255, 77, 0.16);
-}
-
-/* Pulse animation for live data freshness */
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
@@ -61,21 +119,20 @@ html.text-size-lg {
   animation: pulse-subtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Custom subtle dark scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0A0B1C;
+  background: rgb(var(--background));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2C2B73;
+  background: rgb(var(--primary));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3A38A0;
+  background: rgb(var(--primary-hover));
 }

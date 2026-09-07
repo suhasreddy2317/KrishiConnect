@@ -23,12 +23,12 @@ export const Section: React.FC<SectionProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
           <div>
             {title && (
-              <h2 className="text-lg font-semibold text-[#EEF0FA] tracking-tight">
+              <h2 className="text-lg font-semibold text-text-main tracking-tight">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="text-xs text-[#A7ABC9] mt-0.5">{description}</p>
+              <p className="text-xs text-text-muted mt-0.5">{description}</p>
             )}
           </div>
           {action && <div className="shrink-0">{action}</div>}
