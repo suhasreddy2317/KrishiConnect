@@ -1689,7 +1689,7 @@ export const BuyerPage: React.FC = () => {
                   const gradeLabel = match.grade_compatibility === 'exact' ? 'Exact Match' : match.grade_compatibility === 'compatible' ? 'Compatible' : 'Incompatible';
 
                   return (
-                    <Card key={match.lot_id} variant="raised" padding="md" className="space-y-3">
+                     <Card key={match.lot_id} variant="raised" padding="md" className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge variant="lime" size="sm">{cropName}</Badge>
@@ -1717,19 +1717,19 @@ export const BuyerPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-2 pt-1">
-                        <ScoreBar value={match.match_score} label="Match Score" />
-                        <div className="grid grid-cols-2 gap-2">
-                          <ScoreBar value={match.quantity_fit} label="Qty Fit" />
-                          <ScoreBar value={match.location_fit} label="Location Fit" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <ScoreBar value={match.urgency} label="Urgency" />
-                          <ScoreBar value={match.buyer_confidence} label="Buyer Confidence" />
-                        </div>
-                      </div>
+                       <div className="space-y-3 pt-1">
+                         <ScoreBar value={match.match_score} label="Match Score" />
+                         <div className="grid grid-cols-2 gap-3">
+                           <ScoreBar value={match.quantity_fit} label="Qty Fit" />
+                           <ScoreBar value={match.location_fit} label="Location Fit" />
+                         </div>
+                         <div className="grid grid-cols-2 gap-3">
+                           <ScoreBar value={match.urgency} label="Urgency" />
+                           <ScoreBar value={match.buyer_confidence} label="Buyer Confidence" />
+                         </div>
+                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-border/60">
+                      <div className="flex items-center justify-between pt-3 border-t border-border/60">
                         <div className="text-[10px] font-mono text-text-muted">
                           Match Score: <span className="text-text-main">{Math.round(match.match_score)}%</span>
                         </div>
@@ -1744,16 +1744,16 @@ export const BuyerPage: React.FC = () => {
                       </div>
 
                       {match.reasons.length > 0 && (
-                        <div className="text-[10px] text-text-muted space-y-1 pt-1 border-t border-border/60">
-                          <p className="font-medium text-text-main">Matching Reasons</p>
-                          {match.reasons.map((reason, idx) => (
-                            <p key={idx} className="leading-relaxed">• {reason}</p>
-                          ))}
-                        </div>
-                      )}
+                         <div className="text-[10px] text-text-muted space-y-1.5 pt-2 border-t border-border/60">
+                           <p className="font-medium text-text-main">Matching Reasons</p>
+                           {match.reasons.map((reason, idx) => (
+                             <p key={idx} className="leading-relaxed">• {reason}</p>
+                           ))}
+                         </div>
+                       )}
 
-                      {match.limitations.length > 0 && (
-                        <div className="text-[10px] text-status-warning space-y-1">
+                       {match.limitations.length > 0 && (
+                         <div className="text-[10px] text-status-warning space-y-1.5">
                           {match.limitations.map((limitation, idx) => (
                             <p key={idx} className="leading-relaxed">⚠ {limitation}</p>
                           ))}
@@ -1832,8 +1832,13 @@ export const BuyerPage: React.FC = () => {
                )}
           </Section>
 
-          <Card variant="default" padding="md">
-            <h3 className="text-sm font-semibold text-text-main mb-4">Trust Ledger</h3>
+          <Section
+            title="Trust Ledger"
+            description="Recent transactions with settlement status and verification steps."
+            action={
+              <Button variant="ghost" size="sm" onClick={retryTransactions}>Refresh</Button>
+            }
+          >
             {transactionsLoading && <LoadingState message="Loading transactions..." />}
             {transactionsError && <ErrorState title="Unable to load transactions" message={transactionsError} onRetry={retryTransactions} />}
             {!transactionsLoading && !transactionsError && transactions.length === 0 && (
@@ -1858,7 +1863,7 @@ export const BuyerPage: React.FC = () => {
                 ))}
               </div>
             )}
-          </Card>
+          </Section>
 
           <Section
             title="Shipments"
@@ -1881,7 +1886,7 @@ export const BuyerPage: React.FC = () => {
                      emptyMessage="No shipments"
                    />
                  </Card>
-                })
+                 )}
              </Section>
 
                <Section

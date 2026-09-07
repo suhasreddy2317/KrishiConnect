@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -27,6 +27,8 @@ import {
   ClipboardList,
   FileText,
   Users,
+  Search,
+  CheckCircle2,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -226,12 +228,12 @@ export const FieldAgentPage: React.FC = () => {
     fetchOffers();
   }, [token]);
 
-  const lotsNeedingAssistance = lots.filter(l => l.status === 'draft' || !l.quality_grade || l.quality_grade === 'Pending');
+  const lotsNeedingVerification = lots.filter(l => l.status === 'draft' || !l.quality_grade || l.quality_grade === 'Pending');
   const openDisputes = disputes.filter(d => d.status === 'open' || d.status === 'escalated' || d.status === 'awaiting_evidence');
   const pendingOffers = offers.filter(o => o.status === 'submitted' || o.status === 'countered');
 
   const taskItems = [
-    ...lotsNeedingAssistance.slice(0, 3).map(lot => ({
+    ...lotsNeedingVerification.slice(0, 3).map(lot => ({
       id: `LOT-${lot.id}`,
       type: 'Lot Grading',
       farmer: `Farmer #${lot.farmer_id}`,
@@ -298,17 +300,54 @@ export const FieldAgentPage: React.FC = () => {
     }
   };
 
+  const handleViewLot = useCallback((lotId: number) => {
+    console.log('View lot:', lotId);
+  }, []);
+
+  const handleReviewDispute = useCallback((disputeId: number) => {
+    console.log('Review dispute:', disputeId);
+  }, []);
+
+  const handleTaskRowClick = useCallback((item: Record<string, unknown>) => {
+    if (item.backendLotId) {
+      handleViewLot(item.backendLotId as number);
+    } else if (item.backendDisputeId) {
+      handleReviewDispute(item.backendDisputeId as number);
+    }
+  }, [handleViewLot, handleReviewDispute]);
+
+  const handleLotRowClick = useCallback((lot: BackendLot) => {
+    handleViewLot(lot.id);
+  }, [handleViewLot]);
+
+  const handleDisputeRowClick = useCallback((dispute: BackendDispute) => {
+    handleReviewDispute(dispute.id);
+  }, [handleReviewDispute]);
+
   const taskColumns = [
     { key: 'id', header: 'ID', align: 'left' as const, render: (item: any) => <span className="text-xs font-mono text-text-main">{item.id}</span> },
-    { key: 'type', header: 'Type', align: 'left' as const },
+    { key: 'type', header: 'Action Required', align: 'left' as const },
     { key: 'farmer', header: 'Farmer / Opened By', align: 'left' as const },
     { key: 'location', header: 'Location', align: 'left' as const },
     { key: 'priority', header: 'Priority', align: 'center' as const, render: (item: any) => (
       <Badge variant={item.priority === 'High' ? 'error' : item.priority === 'Medium' ? 'warning' : 'default'} size="sm">{item.priority}</Badge>
     )},
-    { key: 'time', header: 'Time', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={item.time} /> },
+    { key: 'time', header: 'Opened', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={item.time} /> },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: any) => (
       <StatusBadge status={item.status === 'Pending' || item.status.includes('Pending') ? 'pending-verification' : item.status === 'Open' || item.status.includes('Open') || item.status.includes('Under Review') ? 'dispute' : 'warning'} label={item.status} size="sm" />
+    )},
+    { key: 'action', header: '', align: 'center' as const, render: (item: any) => (
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={item.backendLotId ? `View lot ${item.id}` : `Review dispute ${item.id}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleTaskRowClick(item);
+        }}
+      >
+        <Search className="w-3.5 h-3.5" />
+      </Button>
     )},
   ];
 
@@ -352,24 +391,24 @@ export const FieldAgentPage: React.FC = () => {
 
         <AlertBanner
           variant="info"
-          title="Backend-Connected Dashboard"
-          message="Lots, disputes, transactions, offers, and payments are connected to live backend APIs. Assigned farmers and member activity sections are demo-only because the backend does not yet expose list/search endpoints for farmers."
+          title="Live Backend Connection"
+          message="Lots, disputes, transactions, and offers are connected to live backend APIs. Assigned farmers and team activity are placeholders awaiting the backend list/search endpoints."
         />
 
         <DashboardGrid columns={4}>
           <MetricCard
-            label="Lots Needing Assistance"
-            value={String(lotsNeedingAssistance.length || lots.length)}
-            unit={lotsNeedingAssistance.length > 0 ? 'Need Action' : 'Total'}
-            change={{ value: lotsNeedingAssistance.length > 0 ? `${lotsNeedingAssistance.length} need grading` : 'Live from backend', isPositive: lotsNeedingAssistance.length === 0 }}
+            label="Pending Verifications"
+            value={String(lotsNeedingVerification.length)}
+            unit={lotsNeedingVerification.length > 0 ? 'Need Grading' : 'All Verified'}
+            change={{ value: lotsNeedingVerification.length > 0 ? `${lotsNeedingVerification.length} lots need review` : 'No pending items', isPositive: lotsNeedingVerification.length === 0 }}
             timestamp="Updated just now"
-            icon={<Camera className="w-4 h-4 text-status-success" />}
+            icon={<Camera className="w-4 h-4 text-status-warning" />}
           />
           <MetricCard
-            label="Open Disputes"
+            label="Pending Disputes"
             value={String(openDisputes.length)}
-            unit="Active"
-            change={{ value: openDisputes.length > 0 ? 'Requires review' : 'No active disputes', isPositive: openDisputes.length === 0 }}
+            unit="Need Review"
+            change={{ value: openDisputes.length > 0 ? `${openDisputes.length} require action` : 'No active disputes', isPositive: openDisputes.length === 0 }}
             timestamp="Updated just now"
             icon={<AlertTriangle className="w-4 h-4 text-status-error" />}
           />
@@ -377,12 +416,12 @@ export const FieldAgentPage: React.FC = () => {
             label="Pending Offers"
             value={String(pendingOffers.length)}
             unit="Awaiting Response"
-            change={{ value: pendingOffers.length > 0 ? 'Needs attention' : 'No pending offers', isPositive: pendingOffers.length === 0 }}
+            change={{ value: pendingOffers.length > 0 ? `${pendingOffers.length} need attention` : 'No pending offers', isPositive: pendingOffers.length === 0 }}
             timestamp="Updated just now"
             icon={<FileText className="w-4 h-4 text-status-warning" />}
           />
           <MetricCard
-            label="Transactions"
+            label="Active Transactions"
             value={String(transactions.length)}
             unit="Total"
             change={{ value: 'Live from backend', isPositive: true }}
@@ -394,29 +433,30 @@ export const FieldAgentPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Section
-              title="Today's Tasks"
-              description="Actionable items derived from lots, disputes, and transactions requiring field attention."
+              title="Pending Actions"
+              description="Items requiring immediate field-agent attention, derived from lots, disputes, and transactions."
               action={
-                <Button variant="ghost" size="sm">Refresh Tasks</Button>
+                <Button variant="ghost" size="sm" onClick={() => { fetchLots(); fetchDisputes(); }}>Refresh</Button>
               }
             >
               <Card variant="default" padding="none">
                 {taskItems.length === 0 ? (
-                  <EmptyState icon={<ClipboardList className="w-6 h-6" />} title="No tasks" description="All lots and disputes are in good standing." />
+                  <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title="All clear" description="No pending actions — lots and disputes are in good standing." />
                 ) : (
                   <Table
                     columns={taskColumns}
                     data={taskItems}
                     keyExtractor={(item) => item.id}
-                    emptyMessage="No tasks assigned"
+                    emptyMessage="No pending actions"
+                    onRowClick={handleTaskRowClick}
                   />
                 )}
               </Card>
             </Section>
 
             <Section
-              title="Lots Requiring Assistance"
-              description="All lots from backend. Draft or incomplete lots may need field-agent grading or evidence capture."
+              title="Lots Pending Verification or Grading"
+              description="All lots from backend. Draft or incomplete lots need field-agent grading and evidence capture."
               action={
                 <Button variant="ghost" size="sm" onClick={fetchLots}>Refresh Lots</Button>
               }
@@ -434,6 +474,7 @@ export const FieldAgentPage: React.FC = () => {
                     data={lots}
                     keyExtractor={(item) => String(item.id)}
                     emptyMessage="No lots found"
+                    onRowClick={handleLotRowClick}
                   />
                 )}
               </Card>
@@ -459,6 +500,7 @@ export const FieldAgentPage: React.FC = () => {
                     data={disputes}
                     keyExtractor={(item) => String(item.id)}
                     emptyMessage="No disputes"
+                    onRowClick={handleDisputeRowClick}
                   />
                 )}
               </Card>
@@ -471,25 +513,28 @@ export const FieldAgentPage: React.FC = () => {
                 <WifiOff className="w-4 h-4 text-status-warning" />
                 <h3 className="text-sm font-semibold text-text-main">Field Mode Sync</h3>
               </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Monitor connectivity and queue pending uploads while operating in the field.
+              </p>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between items-center">
                   <span className="text-text-muted">Status</span>
                   <StatusBadge status="active" label="Online" size="sm" />
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-text-muted">Synced Records</span>
                   <span className="text-text-main font-mono">{lots.length + transactions.length + disputes.length}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-text-muted">Pending Upload</span>
-                  <span className="text-status-warning font-mono">{lotsNeedingAssistance.length} lot{lotsNeedingAssistance.length !== 1 ? 's' : ''}</span>
+                  <span className="text-status-warning font-mono">{lotsNeedingVerification.length} lot{lotsNeedingVerification.length !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-text-muted">Last Synced</span>
                   <DataFreshness timestamp="2m ago" />
                 </div>
               </div>
-              <div className="pt-2 space-y-2">
+              <div className="pt-3 border-t border-border space-y-2">
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UploadCloud className="w-3.5 h-3.5" />}>
                   Sync Now
                 </Button>
@@ -501,7 +546,7 @@ export const FieldAgentPage: React.FC = () => {
 
             <Section title="Assigned Farmers" description="Farmers under your assistance queue.">
               <Card variant="default" padding="none">
-                <div className="p-3 rounded-lg bg-surface-raised border border-border text-xs text-status-warning mb-3">
+                <div className="p-3 mx-3 mt-3 rounded-lg bg-surface-raised border border-border text-[11px] text-status-warning leading-relaxed">
                   Demo data — farmer list/search API not yet implemented
                 </div>
                 <div className="divide-y divide-border">
@@ -516,8 +561,10 @@ export const FieldAgentPage: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-text-main truncate">{farmer.name}</div>
-                        <div className="text-xs text-text-muted">{farmer.village} • {farmer.crop}</div>
-                        <StatusBadge status={farmer.status === 'Assigned' ? 'active' : 'pending-verification'} label={farmer.status} size="sm" />
+                        <div className="text-xs text-text-muted">{farmer.village} · {farmer.crop}</div>
+                        <div className="mt-1">
+                          <StatusBadge status={farmer.status === 'Assigned' ? 'active' : 'pending-verification'} label={farmer.status} size="sm" />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -525,7 +572,7 @@ export const FieldAgentPage: React.FC = () => {
               </Card>
             </Section>
 
-            <Card variant="default" padding="md" className="space-y-4">
+            <Card variant="default" padding="md" className="space-y-3">
               <h3 className="text-sm font-semibold text-text-main">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
@@ -541,9 +588,6 @@ export const FieldAgentPage: React.FC = () => {
                   Report Issue
                 </Button>
               </div>
-              <p className="text-[10px] text-text-muted leading-relaxed">
-                Only &quot;Add Farmer&quot; is wired to the backend. Other actions require additional endpoints not yet implemented.
-              </p>
             </Card>
           </div>
         </div>

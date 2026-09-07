@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
-import { RecommendationCard } from '@/components/data-display/RecommendationCard';
+import { RecommendationCard, type RecommendationVerdict, type ExplanationFactor } from '@/components/data-display/RecommendationCard';
 import { MarketCard } from '@/components/data-display/MarketCard';
 import { SyncStatus } from '@/components/status/SyncStatus';
 import { StatusSteps } from '@/components/status/StatusSteps';
@@ -16,9 +16,26 @@ import { Tabs } from '@/components/ui/Tabs';
 import { Drawer } from '@/components/ui/Drawer';
 import { Dialog } from '@/components/ui/Dialog';
 import { Plus, HelpCircle, Truck, Wallet, AlertTriangle, Package, Clock, CheckCircle2 } from 'lucide-react';
-
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { useTextToSpeech } from '@/components/voice/useTextToSpeech';
+import { VoiceAssistant, VoiceAssistantHandle } from '@/components/voice/VoiceAssistant';
+
+interface SaleWindowResponse {
+  commodity_id: number;
+  commodity_name: string;
+  market_id: number;
+  market_name: string | null;
+  score: number;
+  verdict: string;
+  reasons: string[];
+  factors: Array<Record<string, unknown>>;
+  freshness: string;
+  generated_at: string;
+  limitations: string[];
+  algorithm: Record<string, unknown>;
+}
 
 type TabId = '/farmer' | '/farmer/market' | '/farmer/lots' | '/farmer/offers' | '/farmer/transactions' | '/farmer/shipments' | '/farmer/payments' | '/farmer/disputes';
 
@@ -118,6 +135,8 @@ interface BackendDispute {
 
 export const FarmerPage: React.FC = () => {
   const { token } = useAuth();
+  const { language } = useLanguage();
+  const { speak, stop, isSpeaking, canSpeak } = useTextToSpeech();
   const [activeTab, setActiveTab] = useState<TabId>('/farmer');
   const [isLotDrawerOpen, setIsLotDrawerOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -148,6 +167,42 @@ export const FarmerPage: React.FC = () => {
   const [disputesLoading, setDisputesLoading] = useState(false);
   const [disputesError, setDisputesError] = useState<string | null>(null);
   const [disputes, setDisputes] = useState<BackendDispute[]>([]);
+
+  const [recommendation, setRecommendation] = useState<SaleWindowResponse | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
+
+  const voiceAssistantRef = useRef<VoiceAssistantHandle>(null);
+
+  const handleListenRecommendation = useCallback(
+    (text: string) => {
+      if (isSpeaking) {
+        stop();
+      } else {
+        speak(text, language);
+      }
+    },
+    [language, speak, stop, isSpeaking]
+  );
+
+  const handleVoiceAssistantAction = useCallback(
+    (intent: string) => {
+      const map: Record<string, TabId> = {
+        recommendation: '/farmer',
+        market_price: '/farmer/market',
+        price_trend: '/farmer/market',
+        my_lots: '/farmer/lots',
+        produce: '/farmer/lots',
+        offers: '/farmer/offers',
+        buyers: '/farmer/offers',
+        shipments: '/farmer/shipments',
+        payments: '/farmer/payments',
+      };
+      const tab = map[intent];
+      if (tab) setActiveTab(tab);
+    },
+    [setActiveTab]
+  );
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: '/farmer', label: 'Decision Home' },
@@ -253,6 +308,108 @@ export const FarmerPage: React.FC = () => {
       setDisputesLoading(false);
     }
   };
+
+  const fetchRecommendation = async () => {
+    if (!token) return;
+    setRecommendationLoading(true);
+    setRecommendationError(null);
+    try {
+      const bestLot = lots.find(l => l.status === 'published') || lots[0];
+      if (!bestLot || bestLot.commodity_id == null) {
+        setRecommendation(null);
+        setRecommendationLoading(false);
+        return;
+      }
+      let marketId = bestLot.location
+        ? (() => {
+            const marketMap: Record<string, number> = {
+              nashik: 1, lasalgaon: 1, pimpalgaon: 2,
+            };
+            const key = bestLot.location!.toLowerCase();
+            for (const [k, v] of Object.entries(marketMap)) {
+              if (key.includes(k)) return v;
+            }
+            return 1;
+          })()
+        : 1;
+      const data = await apiRequest<SaleWindowResponse>(
+        `/recommendations/sale-window?commodity_id=${bestLot.commodity_id}&market_id=${marketId}`,
+        { method: 'GET' },
+        token
+      );
+      setRecommendation(data);
+    } catch {
+      setRecommendationError('Unable to load recommendation. Showing last available data.');
+    } finally {
+      setRecommendationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token || lots.length === 0) return;
+    fetchRecommendation();
+  }, [token, lots]);
+
+  const buildVoiceResponseText = useCallback(
+    (rec: SaleWindowResponse | null): string => {
+      if (!rec) {
+        const bestLot = lots.find(l => l.status === 'published') || lots[0];
+        const crop = bestLot?.crop || 'your crop';
+        return `${crop}. Recommendation: data is being loaded. Please wait or ask again.`;
+      }
+      const verdictLabel = rec.verdict.replace(/_/g, ' ').toUpperCase();
+      const topReasons = rec.reasons.slice(0, 2);
+      let text = `${rec.commodity_name}. ${verdictLabel}. Score: ${Math.round(rec.score)} out of 100.`;
+      if (topReasons.length > 0) {
+        text += ` Reasons: ${topReasons.join('. ')}.`;
+      }
+      text += ` Data freshness: ${rec.freshness}.`;
+      return text;
+    },
+    [lots]
+  );
+
+  const getVerdictTab = (verdict: string): TabId => {
+    const v = verdict.toUpperCase();
+    if (v === 'SELL_NOW' || v === 'SELL_SOON' || v === 'REROUTE') return '/farmer/offers';
+    if (v === 'STORE') return '/farmer/market';
+    return '/farmer/market';
+  };
+
+  const getActionLabel = (verdict: string, lang: string): string => {
+    const v = verdict.toUpperCase();
+    if (v === 'SELL_NOW' || v === 'SELL_SOON' || v === 'REROUTE') {
+      if (lang === 'hi') return 'ऑफर देखें';
+      if (lang === 'kn') return 'ಆಫರ್‌ಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
+      if (lang === 'te') return 'ఆఫర్లను చూడండి';
+      return 'View Offers';
+    }
+    if (v === 'STORE') {
+      if (lang === 'hi') return 'बाजार मूल्य देखें';
+      if (lang === 'kn') return 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
+      if (lang === 'te') return 'మార్కెట్ ధరలను చూడండి';
+      return 'View Market Prices';
+    }
+    if (lang === 'hi') return 'बाजार मूल्य देखें';
+    if (lang === 'kn') return 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
+    if (lang === 'te') return 'మార్కెట్ ధరలను చూడండి';
+    return 'View Market Prices';
+  };
+
+  const handlePrimaryAction = useCallback(() => {
+    if (!recommendation) return;
+    const tab = getVerdictTab(recommendation.verdict);
+    setActiveTab(tab);
+  }, [recommendation]);
+
+  const handleRecommendationAction = useCallback(
+    (_intent: 'sell' | 'store' | 'wait', _actionHint: string | null) => {
+      if (voiceAssistantRef.current) {
+        voiceAssistantRef.current.startListening();
+      }
+    },
+    []
+  );
 
   const requestConfirm = (message: string, action: () => void) => {
     setConfirmMessage(message);
@@ -391,13 +548,53 @@ export const FarmerPage: React.FC = () => {
     const bestLot = lots.find(l => l.status === 'published') || lots[0];
     const activeTransaction = transactions[0];
 
+    const displayRecommendation = recommendation;
+    const displayCropName = displayRecommendation?.commodity_name || bestLot?.crop || 'your crop';
+    const displayVerdict = displayRecommendation
+      ? (displayRecommendation.verdict.replace(/_/g, ' ') as RecommendationVerdict)
+      : undefined;
+    const displayScore = displayRecommendation?.score ?? 0;
+    const displayHeadline = displayRecommendation
+      ? `Current market score is ${Math.round(displayRecommendation.score)} out of 100 for ${displayRecommendation.commodity_name}.`
+      : 'Loading recommendation...';
+    const displayReasons: ExplanationFactor[] = displayRecommendation
+      ? displayRecommendation.reasons.slice(0, 3).map((r, idx) => {
+          const parts = r.split(':');
+          const title = parts[0] || `Factor ${idx + 1}`;
+          const description = parts.slice(1).join(':').trim() || r;
+          const impact: 'positive' | 'negative' | 'neutral' =
+            /rising|up|good|favorable|affordable|available|higher|improving/i.test(description)
+              ? 'positive'
+              : /falling|down|risk|costly|loss|not found|no active/i.test(description)
+              ? 'negative'
+              : 'neutral';
+          return { title, impact, description };
+        })
+      : [];
+    const displayTimestamp = displayRecommendation
+      ? `Updated ${displayRecommendation.freshness}`
+      : recommendationLoading
+        ? 'Loading...'
+        : recommendationError
+          ? recommendationError
+          : 'Data not available';
+
+    const actionLabel = displayVerdict ? getActionLabel(displayVerdict, language) : 'View Offers';
+
     return (
       <div className="space-y-6">
-        {isDemoNoticeVisible && (
+        {recommendationError && (
+          <div className="p-3 rounded-xl bg-status-warning/10 border border-status-warning/30 flex items-start justify-between gap-3">
+            <p className="text-xs text-status-warning">{recommendationError}</p>
+            <Button size="sm" variant="ghost" onClick={fetchRecommendation}>Retry</Button>
+          </div>
+        )}
+
+        {isDemoNoticeVisible && lots.length === 0 && (
           <div className="p-3 rounded-xl bg-surface-raised border border-border/40 flex items-start justify-between gap-3">
             <div className="space-y-1">
               <span className="text-[10px] font-mono uppercase tracking-wider text-status-warning">Demo Data Notice</span>
-              <p className="text-xs text-text-muted">Market intelligence and recommendation cards show seeded demo data. Backend APIs require commodity/market IDs to be selected.</p>
+              <p className="text-xs text-text-muted">Market intelligence and recommendation cards show seeded demo data. Publish a produce lot to receive a live recommendation.</p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setIsDemoNoticeVisible(false)}>Dismiss</Button>
           </div>
@@ -414,19 +611,25 @@ export const FarmerPage: React.FC = () => {
           </div>
         </div>
 
+        <VoiceAssistant
+          ref={voiceAssistantRef}
+          onAction={(intent) => handleVoiceAssistantAction(intent)}
+        />
+
         <RecommendationCard
-          cropName={bestLot ? bestLot.crop : 'Red Onion (Nashik)'}
-          verdict="SELL NOW"
-          score={84}
-          headline="Current mandi price is 14% above 30-day historical average."
-          timestamp="Demo data • Updated 15 mins ago"
-          reasons={[
-            { title: 'Price Velocity', impact: 'positive', description: 'Modal price rose ₹180/qtl in the last 72 hours across 3 nearby mandis.' },
-            { title: 'Arrival Pressure', impact: 'neutral', description: 'Arrival volumes are projected to surge 35% next week, which may dampen prices.' },
-            { title: 'Storage Cost Risk', impact: 'negative', description: 'Holding beyond 7 days incurs 3.2% moisture weight loss risk at local ambient storage.' },
-          ]}
-          onPrimaryAction={() => setIsLotDrawerOpen(true)}
-          primaryActionLabel="List Produce Lot"
+          cropName={displayCropName}
+          verdict={displayVerdict || 'WAIT'}
+          score={displayScore}
+          headline={displayHeadline}
+          reasons={displayReasons}
+          timestamp={displayTimestamp}
+          onPrimaryAction={handlePrimaryAction}
+          primaryActionLabel={actionLabel}
+          onListen={() =>
+            handleListenRecommendation(buildVoiceResponseText(displayRecommendation))
+          }
+          onAction={handleRecommendationAction}
+          canListen={canSpeak}
         />
 
         {activeTransaction && (

@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/status/StatusBadge';
 import { SyncStatus } from '@/components/status/SyncStatus';
 import { DataFreshness } from '@/components/status/DataFreshness';
+import { AlertBanner } from '@/components/status/AlertBanner';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Table } from '@/components/data-display/Table';
-import { AlertBanner } from '@/components/status/AlertBanner';
 import { LoadingState } from '@/components/data-display/LoadingState';
 import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
@@ -116,6 +116,19 @@ const formatRelativeTime = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+const formatExpiry = (expiresAt: string, status: string): string => {
+  if (!expiresAt || status === 'accepted' || status === 'rejected' || status === 'expired') return '—';
+  const exp = new Date(expiresAt);
+  const now = new Date();
+  const diffMs = exp.getTime() - now.getTime();
+  if (diffMs <= 0) return 'Expired';
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffMins = Math.floor((diffMs % 3600000) / 60000);
+  if (diffHrs >= 24) return `${Math.floor(diffHrs / 24)}d`;
+  if (diffHrs >= 1) return `${diffHrs}h ${diffMins}m`;
+  return `${diffMins}m`;
+};
+
 const mapLotStatus = (status: string): 'active' | 'kyc-verified' | 'completed' | 'pending-verification' | 'warning' => {
   const map: Record<string, 'active' | 'kyc-verified' | 'completed' | 'pending-verification' | 'warning'> = {
     published: 'active',
@@ -162,6 +175,8 @@ export const FpoPage: React.FC = () => {
   const [demands, setDemands] = useState<BackendDemand[]>([]);
 
   const [offers, setOffers] = useState<BackendOffer[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offersError, setOffersError] = useState<string | null>(null);
 
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
@@ -204,12 +219,17 @@ export const FpoPage: React.FC = () => {
 
   const fetchOffers = async () => {
     if (!token) return;
+    setOffersLoading(true);
+    setOffersError(null);
     try {
       const data = await apiRequest<{ items: BackendOffer[]; total: number }>('/offers/', { method: 'GET' }, token);
       setOffers(data.items);
     } catch (err) {
       console.error('Failed to load offers', err);
+      setOffersError(err instanceof Error ? err.message : 'Failed to load offers');
       setOffers([]);
+    } finally {
+      setOffersLoading(false);
     }
   };
 
@@ -260,21 +280,39 @@ export const FpoPage: React.FC = () => {
 
   const lotColumns = [
     { key: 'id', header: 'Lot ID', align: 'left' as const, render: (item: BackendLot) => <span className="text-xs font-mono text-text-main">LOT-{item.id}</span> },
-    { key: 'crop', header: 'Crop', align: 'left' as const },
+    { key: 'crop', header: 'Crop / Commodity', align: 'left' as const },
     { key: 'quantity', header: 'Quantity', align: 'right' as const, isNumeric: true, render: (item: BackendLot) => <span className="text-xs font-mono text-text-main">{item.quantity_kg.toLocaleString()} {item.unit}</span> },
     { key: 'grade', header: 'Grade', align: 'center' as const, render: (item: BackendLot) => <StatusBadge status="grade" label={item.quality_grade} size="sm" /> },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendLot) => <StatusBadge status={mapLotStatus(item.status)} label={item.status} size="sm" /> },
-    { key: 'updated', header: 'Updated', align: 'left' as const, render: () => <DataFreshness timestamp="Live data" isLive /> },
+    { key: 'updated', header: 'Last Updated', align: 'left' as const, render: () => <DataFreshness timestamp="Live data" isLive /> },
   ];
 
   const demandColumns = [
     { key: 'id', header: 'RFQ ID', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs font-mono text-text-main">RFQ-{item.id}</span> },
     { key: 'crop', header: 'Commodity', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs text-text-main">{getCommodityName(item.commodity_id)}</span> },
-    { key: 'quantity', header: 'Qty + Unit', align: 'right' as const, isNumeric: true, render: (item: BackendDemand) => <span className="text-xs font-mono text-text-main">{item.required_quantity.toLocaleString()} {item.unit}</span> },
-    { key: 'grade', header: 'Grade', align: 'center' as const, render: (item: BackendDemand) => <span className="text-xs text-text-main">{item.minimum_grade || '—'}</span> },
+    { key: 'quantity', header: 'Required Qty', align: 'right' as const, isNumeric: true, render: (item: BackendDemand) => <span className="text-xs font-mono text-text-main">{item.required_quantity.toLocaleString()} {item.unit}</span> },
+    { key: 'grade', header: 'Min Grade', align: 'center' as const, render: (item: BackendDemand) => <span className="text-xs text-text-main">{item.minimum_grade || '—'}</span> },
     { key: 'location', header: 'Delivery', align: 'left' as const, render: (item: BackendDemand) => <span className="text-xs text-text-muted">{item.delivery_location || '—'}</span> },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendDemand) => <StatusBadge status={mapDemandStatus(item.status)} label={item.status} size="sm" /> },
     { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: BackendDemand) => <DataFreshness timestamp={formatRelativeTime(item.updated_at || item.created_at)} /> },
+  ];
+
+  const offerColumns = [
+    { key: 'id', header: 'Offer ID', align: 'left' as const, render: (item: BackendOffer) => <span className="text-xs font-mono text-text-main">OFF-{item.id}</span> },
+    { key: 'buyer', header: 'Buyer', align: 'left' as const, render: (item: BackendOffer) => <span className="text-xs text-text-main">Buyer #{item.buyer_id}</span> },
+    { key: 'quantity', header: 'Qty', align: 'right' as const, isNumeric: true, render: (item: BackendOffer) => <span className="text-xs font-mono text-text-main">{item.quantity.toLocaleString()} kg</span> },
+    { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true, render: (item: BackendOffer) => <span className="text-xs font-mono text-accent">₹{item.offered_price.toLocaleString()}/qtl</span> },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendOffer) => {
+      const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification'> = {
+        submitted: 'pending-verification',
+        countered: 'warning',
+        accepted: 'active',
+        rejected: 'completed',
+        expired: 'completed',
+      };
+      return <StatusBadge status={map[item.status] || 'active'} label={item.status} size="sm" />;
+    }},
+    { key: 'expires', header: 'Expires', align: 'left' as const, render: (item: BackendOffer) => <span className="text-xs text-text-muted">{formatExpiry(item.expires_at, item.status)}</span> },
   ];
 
   const paymentColumns = [
@@ -291,7 +329,7 @@ export const FpoPage: React.FC = () => {
       <MobileStack spacing="md">
         <PageHeader
           title="FPO Manager Hub"
-          subtitle="Aggregate member harvests into bulk pooled lots to command institutional pricing leverage."
+          subtitle="Coordinate pooled lots, track buyer demand, and manage collective sell-side opportunities."
           roleBadge={<StatusBadge status="kyc-verified" label="FPO Verified" size="sm" />}
           statusBadge={<SyncStatus state="Synced" lastSyncedTime="5m ago" />}
           primaryAction={
@@ -314,39 +352,39 @@ export const FpoPage: React.FC = () => {
             unit="Total"
             change={{ value: 'Live from backend', isPositive: true }}
             timestamp="Updated just now"
-             icon={<Layers className="w-4 h-4 text-status-success" />}
+            icon={<Layers className="w-4 h-4 text-status-success" />}
           />
           <MetricCard
-            label="Total Quantity"
+            label="Pooled Quantity"
             value={String(totalQuantityQtl)}
             unit="Quintals"
             change={{ value: 'Live from backend', isPositive: true }}
             timestamp="Updated just now"
-             icon={<Activity className="w-4 h-4 text-accent" />}
+            icon={<Activity className="w-4 h-4 text-accent" />}
           />
           <MetricCard
-            label="Active Demand"
+            label="Active Buyer Demand"
             value={String(activeDemandsCount)}
             unit="Open RFQs"
             change={{ value: 'Live from backend', isPositive: true }}
             timestamp="Updated just now"
-             icon={<Building2 className="w-4 h-4 text-text-muted" />}
+            icon={<Building2 className="w-4 h-4 text-text-muted" />}
           />
           <MetricCard
             label="Pending Offers"
             value={String(pendingOffersCount)}
             unit="Awaiting Response"
-            change={{ value: 'Live from backend', isPositive: false }}
+            change={{ value: pendingOffersCount > 0 ? 'Action needed' : 'All clear', isPositive: pendingOffersCount === 0 }}
             timestamp="Updated just now"
-             icon={<Coins className="w-4 h-4 text-status-warning" />}
+            icon={<Coins className="w-4 h-4 text-status-warning" />}
           />
         </DashboardGrid>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Section
-              title="Recent Pooled Lots"
-              description="Grade-certified bulk lots available for institutional buyers."
+              title="Pooled Produce Inventory"
+              description="Grade-certified bulk lots pooled from member farmers, ready for institutional buyers."
               action={
                 <Button variant="ghost" size="sm">View All Lots</Button>
               }
@@ -370,10 +408,10 @@ export const FpoPage: React.FC = () => {
             </Section>
 
             <Section
-              title="Active Demand"
-              description="Institutional procurement requirements matching your pooled inventory."
+              title="Buyer Demand"
+              description="Active procurement requirements from institutional buyers matching your pooled inventory."
               action={
-                <Button variant="ghost" size="sm">Post New RFQ</Button>
+                <Button variant="ghost" size="sm">Browse All RFQs</Button>
               }
             >
               <Card variant="default" padding="none">
@@ -389,6 +427,31 @@ export const FpoPage: React.FC = () => {
                     data={demands}
                     keyExtractor={(item) => String(item.id)}
                     emptyMessage="No active demands"
+                  />
+                )}
+              </Card>
+            </Section>
+
+            <Section
+              title="Offers & Matching"
+              description="Buyer offers against your pooled lots. Review pricing, quantities, and negotiate terms."
+              action={
+                <Button variant="ghost" size="sm">View All Offers</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {offersLoading ? (
+                  <LoadingState message="Loading offers..." />
+                ) : offersError ? (
+                  <ErrorState title="Unable to load offers" message={offersError} onRetry={fetchOffers} />
+                ) : offers.length === 0 ? (
+                  <EmptyState icon={<Coins className="w-6 h-6" />} title="No offers yet" description="Offers will appear here when buyers respond to your lots." />
+                ) : (
+                  <Table
+                    columns={offerColumns}
+                    data={offers}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No offers yet"
                   />
                 )}
               </Card>
@@ -418,33 +481,29 @@ export const FpoPage: React.FC = () => {
               </Card>
             </Section>
 
-            <Card variant="raised" padding="md" className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Coins className="w-4 h-4 text-accent" />
-                <h3 className="text-sm font-semibold text-text-main">Payout Ledger</h3>
-              </div>
-              {paymentsLoading ? (
-                <LoadingState message="Loading payout ledger..." />
-              ) : paymentsError ? (
-                <ErrorState title="Unable to load payments" message={paymentsError} onRetry={fetchPayments} />
-              ) : payments.length === 0 ? (
-                <EmptyState icon={<Coins className="w-6 h-6" />} title="No payments yet" description="Payouts will appear here once payments are recorded." />
-              ) : (
-                <>
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Pro-rata distribution calculated from individual lot grade contributions.
-                  </p>
-                  <Card variant="default" padding="none">
+            <Section title="Payout Ledger" description="Pro-rata distribution from accepted offers.">
+              <Card variant="default" padding="none">
+                {paymentsLoading ? (
+                  <LoadingState message="Loading payout ledger..." />
+                ) : paymentsError ? (
+                  <ErrorState title="Unable to load payments" message={paymentsError} onRetry={fetchPayments} />
+                ) : payments.length === 0 ? (
+                  <EmptyState icon={<Coins className="w-6 h-6" />} title="No payments yet" description="Payouts will appear here once payments are recorded." />
+                ) : (
+                  <>
+                    <div className="p-3 text-xs text-text-muted bg-surface-raised/50 border-b border-border/30">
+                      Pro-rata distribution calculated from individual lot grade contributions.
+                    </div>
                     <Table
                       columns={paymentColumns}
                       data={payments.slice(0, 5)}
                       keyExtractor={(item) => String(item.id)}
                       emptyMessage="No payments recorded"
                     />
-                  </Card>
-                </>
-              )}
-            </Card>
+                  </>
+                )}
+              </Card>
+            </Section>
           </div>
         </div>
 

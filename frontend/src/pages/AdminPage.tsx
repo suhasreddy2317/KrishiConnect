@@ -370,7 +370,7 @@ export const AdminPage: React.FC = () => {
                     columns={[
                       { key: 'id', header: 'Lot ID', align: 'left' as const },
                       { key: 'crop', header: 'Crop', align: 'left' as const },
-                      { key: 'quantity_kg', header: 'Qty (kg)', align: 'right' as const },
+                      { key: 'quantity_kg', header: 'Qty (kg)', align: 'right' as const, isNumeric: true },
                       { key: 'quality_grade', header: 'Grade', align: 'center' as const },
                       { key: 'location', header: 'Location', align: 'left' as const },
                       { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendLot) => {
@@ -471,7 +471,7 @@ export const AdminPage: React.FC = () => {
                   columns={[
                     { key: 'market', header: 'Market', align: 'left' as const },
                     { key: 'crop', header: 'Crop', align: 'left' as const },
-                    { key: 'price', header: 'Price', align: 'right' as const },
+                    { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true },
                     { key: 'source', header: 'Source', align: 'left' as const },
                     { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={item.updated} /> },
                   ]}
@@ -482,8 +482,7 @@ export const AdminPage: React.FC = () => {
               </Card>
             </Section>
 
-            <Card variant="default" padding="md">
-              <h3 className="text-sm font-semibold text-text-main mb-4">Transaction Lifecycle</h3>
+            <Card variant="default" padding="md" title="Transaction Lifecycle">
               <StatusSteps
                 steps={[
                   { id: '1', label: 'Offer Pending', sublabel: transactions?.items[0] ? `TXN-${transactions.items[0].id}` : '—', status: 'pending' },
@@ -495,8 +494,7 @@ export const AdminPage: React.FC = () => {
               />
             </Card>
 
-            <Card variant="default" padding="md">
-              <h3 className="text-sm font-semibold text-text-main mb-4">Recent Audit Activity</h3>
+            <Card variant="default" padding="md" title="Recent Audit Activity">
               {auditLoading ? (
                 <LoadingState message="Loading audit logs..." />
               ) : auditError ? (
@@ -517,9 +515,8 @@ export const AdminPage: React.FC = () => {
               )}
             </Card>
 
-            <Card variant="default" padding="md">
-              <h3 className="text-sm font-semibold text-text-main mb-4">Quick Governance Actions</h3>
-              <div className="grid grid-cols-2 gap-2">
+            <Card variant="default" padding="md" title="Quick Governance Actions">
+              <div className="grid grid-cols-2 gap-3">
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<FileCheck className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/verification')}>Review Buyers</Button>
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<Scale className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/disputes')}>Review Disputes</Button>
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<Package className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/lots')}>Inspect Lots</Button>
@@ -548,7 +545,7 @@ export const AdminPage: React.FC = () => {
 
   const renderUsersTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="info" title="No dedicated users endpoint" message="There is no /api/users/ endpoint in the current backend. The Users tab UI is preserved as a placeholder. Add an admin user list endpoint to connect this section." />
         <Section title="Users" description="Platform users and role management.">
           <Card variant="default" padding="none">
@@ -583,7 +580,7 @@ export const AdminPage: React.FC = () => {
 
   const renderVerificationTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="info" title="Buyer Verification Queue" message="Showing all registered buyers. The backend exposes buyer data via GET /buyers/. There is no dedicated KYC workflow endpoint yet; status updates require a backend mutation API." />
         <Section title="Buyer Verification" description="KYC submissions awaiting admin review or escalation.">
           <Card variant="default" padding="none">
@@ -623,7 +620,7 @@ export const AdminPage: React.FC = () => {
 
   const renderLotsTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Section title="Lot Oversight" description="All platform lots visible to admin.">
           <Card variant="default" padding="none">
             {lotsLoading ? (
@@ -637,7 +634,7 @@ export const AdminPage: React.FC = () => {
                 columns={[
                   { key: 'id', header: 'Lot ID', align: 'left' as const },
                   { key: 'crop', header: 'Crop', align: 'left' as const },
-                  { key: 'quantity_kg', header: 'Qty (kg)', align: 'right' as const },
+                  { key: 'quantity_kg', header: 'Qty (kg)', align: 'right' as const, isNumeric: true },
                   { key: 'quality_grade', header: 'Grade', align: 'center' as const },
                   { key: 'location', header: 'Location', align: 'left' as const },
                   { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendLot) => {
@@ -665,7 +662,7 @@ export const AdminPage: React.FC = () => {
 
   const renderTransactionsTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Section title="Transactions" description="All platform transactions visible to admin.">
           <Card variant="default" padding="none">
             {transactionsLoading ? (
@@ -681,9 +678,9 @@ export const AdminPage: React.FC = () => {
                   { key: 'lot_id', header: 'Lot', align: 'left' as const },
                   { key: 'buyer_id', header: 'Buyer', align: 'left' as const },
                   { key: 'farmer_id', header: 'Farmer', align: 'left' as const },
-                  { key: 'quantity', header: 'Qty', align: 'right' as const },
-                  { key: 'agreed_price', header: 'Price', align: 'right' as const },
-                  { key: 'total_amount', header: 'Total', align: 'right' as const },
+                  { key: 'quantity', header: 'Qty', align: 'right' as const, isNumeric: true },
+                  { key: 'agreed_price', header: 'Price', align: 'right' as const, isNumeric: true },
+                  { key: 'total_amount', header: 'Total', align: 'right' as const, isNumeric: true },
                   { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendTransaction) => (
                     <StatusBadge status={item.status === 'completed' ? 'completed' : 'active'} label={item.status} size="sm" />
                   )},
@@ -702,7 +699,7 @@ export const AdminPage: React.FC = () => {
 
   const renderDisputesTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="info" title="Dispute Resolution" message="Admin can view all disputes via GET /disputes/. Status updates use PATCH /disputes/{id}/status with an admin audit trail." />
         <Section title="Disputes" description="Open and escalated disputes requiring mediation or review.">
           <Card variant="default" padding="none">
@@ -745,7 +742,7 @@ export const AdminPage: React.FC = () => {
 
   const renderMarketDataTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="info" title="Market Data" message="Market price history is available via GET /market-prices/history but requires commodity/market selection. Showing demo placeholder below." />
         <Section title="Market Data Freshness" description="Seeded demo data — not live government feeds.">
           <Card variant="default" padding="none">
@@ -753,7 +750,7 @@ export const AdminPage: React.FC = () => {
               columns={[
                 { key: 'market', header: 'Market', align: 'left' as const },
                 { key: 'crop', header: 'Crop', align: 'left' as const },
-                { key: 'price', header: 'Price', align: 'right' as const },
+                { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true },
                 { key: 'source', header: 'Source', align: 'left' as const },
                 { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={item.updated} /> },
               ]}
@@ -769,7 +766,7 @@ export const AdminPage: React.FC = () => {
 
   const renderAuditLogsTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="success" title="Audit Log Connected" message="Audit records are fetched from GET /api/audit/. This endpoint is admin-only and returns an append-only ledger of platform actions." />
         <Section title="Audit Timeline" description="Append-only audit log of administrative and platform actions.">
           <Card variant="default" padding="none">
@@ -802,7 +799,7 @@ export const AdminPage: React.FC = () => {
 
   const renderSystemHealthTab = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AlertBanner variant="info" title="System Health" message="System health metrics are not exposed by a dedicated backend endpoint. This tab preserves the intended UI shell." />
         <Section title="System Health" description="Platform operational health and monitoring.">
           <Card variant="raised" padding="md" className="space-y-4">
@@ -860,18 +857,6 @@ export const AdminPage: React.FC = () => {
         {activeTab === '/admin/market-data' && renderMarketDataTab()}
         {activeTab === '/admin/audit-logs' && renderAuditLogsTab()}
         {activeTab === '/admin/system-health' && renderSystemHealthTab()}
-
-        <Card variant="default" padding="md">
-          <div className="flex items-start space-x-4">
-            <Lock className="w-5 h-5 text-accent mt-0.5 shrink-0" />
-            <div className="space-y-1 text-sm">
-              <h3 className="font-semibold text-text-main">Admin Security & Privacy Rules (RULES.md Section 2 & 15)</h3>
-              <p className="text-text-muted leading-relaxed">
-                Admins have elevated privileges for dispute mediation and KYC approval, but may not view user payment or contact details outside an active dispute investigation. All administrative actions require an explicit audit justification that is permanently written to the ledger.
-              </p>
-            </div>
-          </div>
-        </Card>
       </MobileStack>
     </AppShell>
   );
