@@ -19,7 +19,7 @@ export const SplashScreen: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#F0FDF4]"
       style={{
         animation: 'splashFadeOut 0.4s ease-out 1.8s forwards',
         pointerEvents: 'none',
