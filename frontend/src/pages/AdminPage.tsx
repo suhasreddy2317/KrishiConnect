@@ -204,6 +204,65 @@ export const AdminPage: React.FC = () => {
     commodity_name: string;
   }
 
+  interface AdminHealthApi {
+    status: string;
+  }
+
+  interface AdminHealthDatabase {
+    status: string;
+  }
+
+  interface AdminHealthMarketData {
+    status: string;
+    latest_timestamp: string | null;
+  }
+
+  interface AdminHealthUserCounts {
+    total: number;
+    active: number;
+  }
+
+  interface AdminHealthTransactionCounts {
+    total: number;
+    pending: number;
+  }
+
+  interface AdminHealthPaymentCounts {
+    total: number;
+    pending: number;
+  }
+
+  interface AdminHealthShipmentCounts {
+    total: number;
+    pending: number;
+  }
+
+  interface AdminHealthDisputeCounts {
+    total: number;
+    open: number;
+  }
+
+  interface AdminHealthAudit {
+    events_last_24h: number;
+  }
+
+  interface AdminHealthResponse {
+    status: string;
+    api: AdminHealthApi;
+    database: AdminHealthDatabase;
+    market_data: AdminHealthMarketData;
+    users: AdminHealthUserCounts;
+    transactions: AdminHealthTransactionCounts;
+    payments: AdminHealthPaymentCounts;
+    shipments: AdminHealthShipmentCounts;
+    disputes: AdminHealthDisputeCounts;
+    audit: AdminHealthAudit;
+  }
+
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [healthError, setHealthError] = useState<string | null>(null);
+  const [health, setHealth] = useState<AdminHealthResponse | null>(null);
+
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: '/admin', label: 'Dashboard' },
     { id: '/admin/users', label: 'Users' },
@@ -226,6 +285,7 @@ export const AdminPage: React.FC = () => {
     fetchUsers();
     fetchCommodities();
     fetchMarkets();
+    fetchHealth();
   }, [token]);
 
   useEffect(() => {
@@ -338,6 +398,20 @@ export const AdminPage: React.FC = () => {
       setMarkets(data);
     } catch (err) {
       setMarketsError(err instanceof Error ? err.message : 'Failed to load markets');
+    }
+  };
+
+  const fetchHealth = async () => {
+    if (!token) return;
+    setHealthLoading(true);
+    setHealthError(null);
+    try {
+      const data = await apiRequest<AdminHealthResponse>('/admin/health', { method: 'GET' }, token);
+      setHealth(data);
+    } catch (err) {
+      setHealthError(err instanceof Error ? err.message : 'Unable to load system health');
+    } finally {
+      setHealthLoading(false);
     }
   };
 
@@ -952,31 +1026,99 @@ export const AdminPage: React.FC = () => {
   };
 
   const renderSystemHealthTab = () => {
+    if (healthLoading) {
+      return (
+        <div className="space-y-6">
+          <Section title="System Health" description="Platform operational health and monitoring.">
+            <Card variant="raised" padding="md">
+              <LoadingState message="Loading system health..." />
+            </Card>
+          </Section>
+        </div>
+      );
+    }
+
+    if (healthError) {
+      return (
+        <div className="space-y-6">
+          <Section title="System Health" description="Platform operational health and monitoring.">
+            <Card variant="raised" padding="md">
+              <ErrorState title="Unable to load system health" message={healthError} onRetry={fetchHealth} />
+            </Card>
+          </Section>
+        </div>
+      );
+    }
+
+    const dbStatus = health?.database.status || 'unknown';
+    const marketStatus = health?.market_data.status || 'no_data';
+    const apiStatus = health?.api.status || 'unknown';
+
+    const databaseBadgeStatus = dbStatus === 'connected' ? 'active' : 'warning';
+    const marketBadgeStatus = marketStatus === 'fresh' ? 'active' : 'warning';
+    const apiBadgeStatus = apiStatus === 'operational' ? 'active' : 'warning';
+
+    const latestTimestamp = health?.market_data.latest_timestamp
+      ? new Date(health.market_data.latest_timestamp).toLocaleString()
+      : null;
+
     return (
       <div className="space-y-6">
-        <AlertBanner variant="info" title="System Health" message="System health metrics are not exposed by a dedicated backend endpoint. This tab preserves the intended UI shell." />
-        <Section title="System Health" description="Platform operational health and monitoring.">
+        <Section title="System Health" description="Platform operational health and monitoring." action={
+          <Button variant="ghost" size="sm" onClick={fetchHealth} leftIcon={<Activity className="w-4 h-4" />}>
+            Refresh
+          </Button>
+        }>
           <Card variant="raised" padding="md" className="space-y-4">
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-text-muted">API</span>
-                <StatusBadge status="active" label="Operational" size="sm" />
+                <StatusBadge status={apiBadgeStatus} label={apiStatus === 'operational' ? 'Operational' : apiStatus} size="sm" />
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Database</span>
-                <StatusBadge status="active" label="Connected" size="sm" />
+                <StatusBadge status={databaseBadgeStatus} label={dbStatus === 'connected' ? 'Connected' : dbStatus === 'error' ? 'Error' : dbStatus} size="sm" />
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Market Data</span>
-                <StatusBadge status="warning" label="Demo Feed" size="sm" />
+                <StatusBadge status={marketBadgeStatus} label={marketStatus === 'fresh' ? 'Fresh' : marketStatus === 'stale' ? 'Stale' : 'No Data'} size="sm" />
+              </div>
+              {latestTimestamp && (
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Latest Market Price</span>
+                  <span className="text-text">{latestTimestamp}</span>
+                </div>
+              )}
+              {!latestTimestamp && (
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Latest Market Price</span>
+                  <span className="text-text">No market data</span>
+                </div>
+              )}
+              <div className="border-t border-border my-2" />
+              <div className="flex justify-between">
+                <span className="text-text-muted">Users</span>
+                <span className="text-text">{health?.users.total ?? 0} total · {health?.users.active ?? 0} active</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Sync Queue</span>
-                <StatusBadge status="active" label="Normal" size="sm" />
+                <span className="text-text-muted">Transactions</span>
+                <span className="text-text">{health?.transactions.total ?? 0} total · {health?.transactions.pending ?? 0} pending</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Notifications</span>
-                <StatusBadge status="active" label="Operational" size="sm" />
+                <span className="text-text-muted">Payments</span>
+                <span className="text-text">{health?.payments.total ?? 0} total · {health?.payments.pending ?? 0} pending</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Shipments</span>
+                <span className="text-text">{health?.shipments.total ?? 0} total · {health?.shipments.pending ?? 0} pending</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Disputes</span>
+                <span className="text-text">{health?.disputes.total ?? 0} total · {health?.disputes.open ?? 0} open</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Audit Activity</span>
+                <span className="text-text">{health?.audit.events_last_24h ?? 0} events in last 24h</span>
               </div>
             </div>
           </Card>
