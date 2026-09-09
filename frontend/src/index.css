@@ -15,6 +15,10 @@
     --accent: 101 163 13;
     --accent-soft: 220 252 231;
     --focus-ring: 22 101 52;
+    --card-bg: 20 65 28;
+    --card-surface: 30 85 38;
+    --text-on-card: 240 253 240;
+    --text-muted-on-card: 185 228 188;
   }
 
   [data-role='farmer'] {

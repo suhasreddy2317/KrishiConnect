@@ -1,5 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 
+const LANG_VOICE_MAP: Record<string, string> = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  kn: 'kn-IN',
+  te: 'te-IN',
+};
+
+const findVoice = (voices: SpeechSynthesisVoice[], langCode: string): SpeechSynthesisVoice | undefined => {
+  const targetLang = LANG_VOICE_MAP[langCode] || 'en-IN';
+  return (
+    voices.find((v) => v.lang === targetLang) ||
+    voices.find((v) => v.lang.startsWith(targetLang.split('-')[0]))
+  );
+};
+
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -26,6 +41,13 @@ export const useTextToSpeech = () => {
     };
   }, []);
 
+  const hasVoiceFor = useCallback(
+    (langCode: string) => {
+      return voices.length > 0 && findVoice(voices, langCode) !== undefined;
+    },
+    [voices]
+  );
+
   const speak = useCallback(
     (text: string, langCode: string) => {
       if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -39,18 +61,8 @@ export const useTextToSpeech = () => {
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-
-      const langVoiceMap: Record<string, string> = {
-        en: 'en-IN',
-        hi: 'hi-IN',
-        kn: 'kn-IN',
-        te: 'te-IN',
-      };
-
-      const targetLang = langVoiceMap[langCode] || 'en-IN';
-      const voice =
-        voices.find((v) => v.lang === targetLang) ||
-        voices.find((v) => v.lang.startsWith(targetLang.split('-')[0]));
+      const voice = findVoice(voices, langCode);
+      const targetLang = LANG_VOICE_MAP[langCode] || 'en-IN';
 
       if (voice) {
         utterance.voice = voice;
@@ -75,5 +87,5 @@ export const useTextToSpeech = () => {
     }
   }, []);
 
-  return { speak, stop, isSpeaking, canSpeak };
+  return { speak, stop, isSpeaking, canSpeak, hasVoiceFor };
 };

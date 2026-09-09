@@ -23,6 +23,10 @@ import { apiRequest } from '@/lib/api';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTextToSpeech } from '@/components/voice/useTextToSpeech';
 import { VoiceAssistant, VoiceAssistantHandle } from '@/components/voice/VoiceAssistant';
+import {
+  buildLocalizedReason,
+  parseFactor,
+} from '@/lib/recommendationLocalization';
 
 interface SaleWindowResponse {
   commodity_id: number;
@@ -149,7 +153,18 @@ interface BackendDispute {
 export const FarmerPage: React.FC = () => {
   const { token } = useAuth();
   const { language, t } = useLanguage();
-  const { speak, stop, isSpeaking, canSpeak } = useTextToSpeech();
+  const { speak, stop, isSpeaking, canSpeak, hasVoiceFor } = useTextToSpeech();
+
+  const localizedCropName = (crop: string): string => {
+    const map: Record<string, string> = {
+      Wheat: t('recommendationCard.cropNames.wheat'),
+      Soybean: t('recommendationCard.cropNames.soybean'),
+      Rice: t('recommendationCard.cropNames.rice'),
+      'Red Onion': t('recommendationCard.cropNames.redOnion'),
+      Tomato: t('recommendationCard.cropNames.tomato'),
+    };
+    return map[crop] || crop;
+  };
   const [activeTab, setActiveTab] = useState<TabId>('/farmer');
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [isLotDrawerOpen, setIsLotDrawerOpen] = useState(false);
@@ -451,24 +466,100 @@ export const FarmerPage: React.FC = () => {
     fetchRecommendation();
   }, [token, lots]);
 
-  const buildVoiceResponseText = useCallback(
-    (rec: SaleWindowResponse | null): string => {
-      if (!rec) {
-        const sortedLots = [...lots].sort((a, b) => b.id - a.id);
-        const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
-        const crop = bestLot?.crop || 'your crop';
-        return `${crop}. Recommendation: data is being loaded. Please wait or ask again.`;
+  const VERDICT_TTS_KEY: Record<string, string> = {
+    SELL_NOW: 'sellNow',
+    SELL_SOON: 'sellSoon',
+    WAIT: 'wait',
+    STORE: 'store',
+    REROUTE: 'reroute',
+  };
+
+  const buildLocalizedFactors = useCallback(
+    (rec: SaleWindowResponse | null, cropName: string): ExplanationFactor[] => {
+      if (!rec) return [];
+      const rawFactors = Array.isArray(rec.factors) ? rec.factors : [];
+      const seen = new Set<string>();
+      const localized: ExplanationFactor[] = [];
+
+      for (const f of rawFactors) {
+        const parsed = parseFactor(f);
+        if (!parsed) continue;
+        const typeKey = `${parsed.type}_${parsed.condition}`;
+        if (seen.has(typeKey)) continue;
+        seen.add(typeKey);
+
+        const result = buildLocalizedReason(f, t, cropName);
+        if (result) {
+          localized.push({
+            title: result.title,
+            impact: result.impact,
+            description: result.description,
+          });
+        }
       }
-      const verdictLabel = rec.verdict.replace(/_/g, ' ').toUpperCase();
-      const topReasons = rec.reasons.slice(0, 2);
-      let text = `${rec.commodity_name}. ${verdictLabel}. Score: ${Math.round(rec.score)} out of 100.`;
-      if (topReasons.length > 0) {
-        text += ` Reasons: ${topReasons.join('. ')}.`;
+
+      if (localized.length === 0 && rec.reasons.length > 0) {
+        return rec.reasons.slice(0, 3).map((r, idx) => {
+          const parts = r.split(':');
+          const rawTitle = parts[0] || `Factor ${idx + 1}`;
+          const description = parts.slice(1).join(':').trim() || r;
+          const impact: 'positive' | 'negative' | 'neutral' =
+            /rising|up|good|favorable|affordable|available|higher|improving/i.test(description)
+              ? 'positive'
+              : /falling|down|risk|costly|loss|not found|no active/i.test(description)
+              ? 'negative'
+              : 'neutral';
+          const titleKey = `recommendationCard.${rawTitle.toLowerCase().replace(/\s+/g, '')}`;
+          const localizedTitle = t(titleKey);
+          const title = localizedTitle !== titleKey ? localizedTitle : rawTitle;
+          return { title, impact, description };
+        });
       }
-      text += ` Data freshness: ${rec.freshness}.`;
-      return text;
+
+      return localized.slice(0, 3);
     },
-    [lots]
+    [t]
+  );
+
+  const buildVoiceResponseText = useCallback(
+    (rec: SaleWindowResponse | null, cropName: string): string => {
+      if (!rec) {
+        return t('recommendationTts.unavailable');
+      }
+
+      const verdictKey = VERDICT_TTS_KEY[rec.verdict] || rec.verdict.toLowerCase();
+      const verdictLabel = t(`recommendationCard.${verdictKey}`);
+      const explanation = t(`recommendationCard.${verdictKey}Explanation`);
+
+      const cropLine = t('recommendationTts.cropLine', { crop: cropName });
+      const actionLine = t('recommendationTts.actionLine', { action: verdictLabel });
+      const scoreLine = t('recommendationTts.scoreLine', { score: Math.round(rec.score) });
+      const explanationLine = explanation
+        ? t('recommendationTts.explanationLine', { explanation })
+        : '';
+
+      let text = `${cropLine} ${actionLine} ${scoreLine}`;
+      if (explanationLine) {
+        text += ` ${explanationLine}`;
+      }
+
+      const localizedReasons = buildLocalizedFactors(rec, cropName);
+      const topReasons = localizedReasons
+        .filter(r => r.impact === 'positive')
+        .slice(0, 2);
+
+      if (topReasons.length > 0) {
+        const reasonDescriptions = topReasons
+          .map(r => r.description)
+          .filter(d => d.length > 0);
+        if (reasonDescriptions.length > 0) {
+          text += ` ${t('recommendationTts.reasonsPrefix')} ${reasonDescriptions.join('. ')}.`;
+        }
+      }
+
+      return text.replace(/\s+/g, ' ').trim();
+    },
+    [t, buildLocalizedFactors]
   );
 
   const getVerdictTab = (verdict: string): TabId => {
@@ -478,24 +569,15 @@ export const FarmerPage: React.FC = () => {
     return '/farmer/market';
   };
 
-  const getActionLabel = (verdict: string, lang: string): string => {
+  const getActionLabel = (verdict: string): string => {
     const v = verdict.toUpperCase();
     if (v === 'SELL_NOW' || v === 'SELL_SOON' || v === 'REROUTE') {
-      if (lang === 'hi') return 'ऑफर देखें';
-      if (lang === 'kn') return 'ಆಫರ್‌ಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
-      if (lang === 'te') return 'ఆఫర్లను చూడండి';
-      return 'View Offers';
+      return t('recommendationCard.viewOffersAction');
     }
     if (v === 'STORE') {
-      if (lang === 'hi') return 'बाजार मूल्य देखें';
-      if (lang === 'kn') return 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
-      if (lang === 'te') return 'మార్కెట్ ధరలను చూడండి';
-      return 'View Market Prices';
+      return t('recommendationCard.viewMarketAction');
     }
-    if (lang === 'hi') return 'बाजार मूल्य देखें';
-    if (lang === 'kn') return 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
-    if (lang === 'te') return 'మార్కెట్ ధరలను చూడండి';
-    return 'View Market Prices';
+    return t('recommendationCard.viewMarketAction');
   };
 
   const handlePrimaryAction = useCallback(() => {
@@ -662,37 +744,33 @@ export const FarmerPage: React.FC = () => {
     const activeTransaction = transactions[0];
 
     const displayRecommendation = recommendation;
-    const displayCropName = displayRecommendation?.commodity_name || bestLot?.crop || 'your crop';
+    const displayCropName = localizedCropName(
+      displayRecommendation?.commodity_name || bestLot?.crop || 'your crop'
+    );
     const displayVerdict = displayRecommendation
       ? (displayRecommendation.verdict.replace(/_/g, ' ') as RecommendationVerdict)
       : undefined;
     const displayScore = displayRecommendation?.score ?? 0;
     const displayHeadline = displayRecommendation
-      ? `Current market score is ${Math.round(displayRecommendation.score)} out of 100 for ${displayRecommendation.commodity_name}.`
-      : 'Loading recommendation...';
-    const displayReasons: ExplanationFactor[] = displayRecommendation
-      ? displayRecommendation.reasons.slice(0, 3).map((r, idx) => {
-          const parts = r.split(':');
-          const title = parts[0] || `Factor ${idx + 1}`;
-          const description = parts.slice(1).join(':').trim() || r;
-          const impact: 'positive' | 'negative' | 'neutral' =
-            /rising|up|good|favorable|affordable|available|higher|improving/i.test(description)
-              ? 'positive'
-              : /falling|down|risk|costly|loss|not found|no active/i.test(description)
-              ? 'negative'
-              : 'neutral';
-          return { title, impact, description };
+      ? t('farmerPage.recommendation.scoreSummary', {
+          score: Math.round(displayRecommendation.score),
+          crop: displayCropName,
         })
-      : [];
+      : t('recommendationTts.loading');
+
+    const displayReasons: ExplanationFactor[] = buildLocalizedFactors(
+      displayRecommendation,
+      displayCropName
+    );
     const displayTimestamp = displayRecommendation
-      ? `Updated ${displayRecommendation.freshness}`
+      ? t('farmerPage.recommendation.updated', { freshness: displayRecommendation.freshness })
       : recommendationLoading
         ? 'Loading...'
         : recommendationError
           ? recommendationError
           : 'Data not available';
 
-    const actionLabel = displayVerdict ? getActionLabel(displayVerdict, language) : 'View Offers';
+    const actionLabel = displayVerdict ? getActionLabel(displayVerdict) : t('recommendationCard.viewOffersAction');
 
     return (
       <div className="space-y-6">
@@ -739,10 +817,14 @@ export const FarmerPage: React.FC = () => {
           onPrimaryAction={handlePrimaryAction}
           primaryActionLabel={actionLabel}
           onListen={() =>
-            handleListenRecommendation(buildVoiceResponseText(displayRecommendation))
+            handleListenRecommendation(
+              buildVoiceResponseText(displayRecommendation, displayCropName)
+            )
           }
           onAction={handleRecommendationAction}
           canListen={canSpeak}
+          isSpeaking={isSpeaking}
+          voiceAvailable={hasVoiceFor(language)}
         />
 
         {activeTransaction && (

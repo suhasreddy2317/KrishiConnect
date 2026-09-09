@@ -40,6 +40,8 @@ export interface RecommendationCardProps {
   onListen?: () => void;
   onAction?: (intent: 'sell' | 'store' | 'wait', actionHint: string | null) => void;
   canListen?: boolean;
+  isSpeaking?: boolean;
+  voiceAvailable?: boolean;
   className?: string;
 }
 
@@ -71,6 +73,8 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   onListen,
   onAction,
   canListen = true,
+  isSpeaking = false,
+  voiceAvailable = true,
   className,
 }) => {
   const { t } = useLanguage();
@@ -83,32 +87,32 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
     'SELL NOW': {
       badgeBg: 'bg-status-success text-white',
       textColor: 'text-status-success',
-      borderColor: 'border-status-success/40',
+      borderColor: 'border-status-success/60',
       iconColor: 'text-white',
     },
     'SELL SOON': {
-      badgeBg: 'bg-status-success/15 border border-status-success/40 text-status-success',
+      badgeBg: 'bg-status-success/30 border border-status-success/60 text-white',
       textColor: 'text-status-success',
-      borderColor: 'border-status-success/40',
-      iconColor: 'text-status-success',
+      borderColor: 'border-status-success/60',
+      iconColor: 'text-white',
     },
     WAIT: {
-      badgeBg: 'bg-status-warning/15 border border-status-warning/40 text-status-warning',
+      badgeBg: 'bg-status-warning/30 border border-status-warning/60 text-white',
       textColor: 'text-status-warning',
-      borderColor: 'border-status-warning/40',
-      iconColor: 'text-status-warning',
+      borderColor: 'border-status-warning/60',
+      iconColor: 'text-white',
     },
     STORE: {
-      badgeBg: 'bg-surface-raised border border-border text-text-muted',
-      textColor: 'text-text-muted',
-      borderColor: 'border-border',
-      iconColor: 'text-text-muted',
+      badgeBg: 'bg-white/90 border border-white/30 text-card-bg',
+      textColor: 'text-card-bg',
+      borderColor: 'border-white/30',
+      iconColor: 'text-card-bg',
     },
     REROUTE: {
-      badgeBg: 'bg-status-success/15 border border-status-success/40 text-status-success',
+      badgeBg: 'bg-status-success/30 border border-status-success/60 text-white',
       textColor: 'text-status-success',
-      borderColor: 'border-status-success/40',
-      iconColor: 'text-status-success',
+      borderColor: 'border-status-success/60',
+      iconColor: 'text-white',
     },
   };
 
@@ -132,39 +136,31 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
     onAction?.('sell', null);
   }, [onAction]);
 
-  const scoreColor =
-    score >= 76
-      ? 'text-status-success'
-      : score >= 51
-      ? 'text-status-warning'
-      : score >= 26
-      ? 'text-status-warning'
-      : 'text-text-muted';
-
   const scoreBg =
     score >= 76
-      ? 'bg-status-success/8'
+      ? 'bg-status-success/20'
       : score >= 51
-      ? 'bg-status-warning/8'
-      : 'bg-surface-raised';
+      ? 'bg-status-warning/20'
+      : 'bg-[#1E5A28]/20';
 
   return (
     <div
       className={cn(
-        'rounded-2xl bg-surface border border-border p-5 sm:p-7 relative overflow-hidden',
+        'rounded-2xl border p-5 sm:p-7 relative overflow-hidden',
+        'bg-[#143F1C] border-[#1E5A28]/50',
         className
       )}
       role="region"
       aria-label={t('recommendationCard.recommendedAction')}
     >
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-56 h-56 rounded-full bg-border/15 blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-56 h-56 rounded-full bg-[#1E5A28]/40 blur-3xl pointer-events-none" />
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-border">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-white/10">
         <div className="flex items-center space-x-2">
-          <span className="text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-surface-raised text-accent border border-border font-semibold">
+          <span className="text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#1E5A28]/50 text-accent border border-white/10 font-semibold">
             {cropName}
           </span>
-          <span className="text-[11px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#B9E4BC]/80">
             {t('recommendationCard.recommendedAction')}
           </span>
         </div>
@@ -175,14 +171,15 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
               variant="ghost"
               size="sm"
               onClick={onListen}
-              aria-label={t('recommendationCard.listenToRecommendation')}
-              leftIcon={<Volume2 className="w-4 h-4" />}
-              className="text-text-muted hover:text-accent"
+              aria-label={isSpeaking ? t('voiceAssistant.stopListening') : t('recommendationCard.listenToRecommendation')}
+              leftIcon={isSpeaking ? undefined : <Volume2 className="w-4 h-4" />}
+               className="text-[#B9E4BC]/80 hover:text-accent"
+              title={voiceAvailable ? undefined : t('recommendationCard.voiceNotAvailable')}
             >
-              {t('recommendation.listen')}
+              {isSpeaking ? t('voiceAssistant.stopListening') : t('recommendation.listen')}
             </Button>
           )}
-          <DataFreshness timestamp={timestamp} isLive />
+          <DataFreshness timestamp={timestamp} isLive className="text-[#B9E4BC]/80" />
         </div>
       </div>
 
@@ -199,19 +196,19 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             <span>{getVerdictLocalized()}</span>
           </div>
 
-          <p className="text-sm sm:text-base text-text-main font-medium leading-relaxed">
+          <p className="text-sm sm:text-base text-[#F0FDF4] font-medium leading-relaxed">
             {headline}
           </p>
 
           {explanationText && (
-            <p className="text-xs text-text-muted leading-relaxed">
+            <p className="text-xs text-[#B9E4BC]/80 leading-relaxed">
               {explanationText}
             </p>
           )}
 
           {topReason && (
-            <p className="text-xs text-text-muted leading-relaxed">
-              <span className="font-semibold text-status-success">{topReason.title}: </span>
+            <p className="text-xs text-[#B9E4BC]/80 leading-relaxed">
+              <span className="font-semibold text-accent">{topReason.title}: </span>
               <span>{topReason.description}</span>
             </p>
           )}
@@ -219,47 +216,47 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
         <div
           className={cn(
-            'sm:border-l sm:border-border sm:pl-6 shrink-0 flex items-center sm:flex-col sm:items-end justify-between gap-2 rounded-xl p-3 sm:p-0',
+            'sm:border-l sm:border-white/10 sm:pl-6 shrink-0 flex items-center sm:flex-col sm:items-end justify-between gap-2 rounded-xl p-3 sm:p-0 bg-[#1E5A28]/20',
             scoreBg
           )}
         >
-          <span className="text-[11px] font-mono text-text-muted uppercase tracking-wider">
-            Score
+          <span className="text-[11px] font-mono text-[#B9E4BC]/70 uppercase tracking-wider">
+            {t('recommendationCard.score')}
           </span>
           <div className="flex items-baseline space-x-1">
-            <span className={cn('text-4xl sm:text-5xl font-bold tabular-nums', scoreColor)}>
+            <span className="text-4xl sm:text-5xl font-bold tabular-nums text-white">
               {Math.round(score)}
             </span>
-            <span className="text-sm text-text-muted font-semibold">/100</span>
+            <span className="text-sm text-[#B9E4BC]/80 font-semibold">/100</span>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl bg-surface-raised border border-border">
+      <div className="rounded-xl bg-[#1E5A28]/25 border border-white/10">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between text-xs font-semibold text-text-main hover:text-accent transition-colors p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised rounded-xl"
+          className="w-full flex items-center justify-between text-xs font-semibold text-[#F0FDF4] hover:text-accent transition-colors p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card-surface rounded-xl"
           aria-expanded={isExpanded}
         >
           <div className="flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 text-status-success" />
             <span>
               {t('recommendationCard.why')}{' '}
-              <span className="text-text-muted font-normal">
+              <span className="text-[#B9E4BC]/70 font-normal">
                 ({reasons.length} {t('recommendationCard.drivers')})
               </span>
             </span>
           </div>
           {isExpanded ? (
-            <ChevronUp className="w-4 h-4 text-text-muted" aria-hidden="true" />
+            <ChevronUp className="w-4 h-4 text-[#B9E4BC]/60" aria-hidden="true" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-text-muted" aria-hidden="true" />
+            <ChevronDown className="w-4 h-4 text-[#B9E4BC]/60" aria-hidden="true" />
           )}
         </button>
 
         {isExpanded && (
-          <div className="px-4 pb-4 space-y-2.5 border-t border-border pt-3">
+          <div className="px-4 pb-4 space-y-2.5 border-t border-white/10 pt-3">
             {reasons.map((reason, idx) => (
               <div key={idx} className="flex items-start space-x-2.5 text-xs">
                 <span
@@ -274,10 +271,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
                   aria-hidden="true"
                 />
                 <div>
-                  <span className="font-semibold text-text-main">
+                  <span className="font-semibold text-[#F0FDF4]">
                     {reason.title}:{' '}
                   </span>
-                  <span className="text-text-muted">{reason.description}</span>
+                  <span className="text-[#B9E4BC]/80">{reason.description}</span>
                 </div>
               </div>
             ))}
@@ -285,9 +282,9 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
         )}
       </div>
 
-      <div className="mt-5 pt-4 border-t border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {primaryActionLabel && (
-          <span className="text-xs text-text-muted hidden sm:block">
+          <span className="text-xs text-[#B9E4BC]/80 hidden sm:block">
             {t('recommendationCard.recommendedAction')}:
           </span>
         )}
@@ -295,9 +292,8 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           {primaryActionLabel && onPrimaryAction && (
             <Button
               size="lg"
-              variant="primary"
               onClick={onPrimaryAction}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-white hover:bg-gray-100 text-card-bg font-semibold"
               aria-label={`${t('recommendationCard.recommendedAction')}: ${primaryActionLabel}`}
             >
               {primaryActionLabel}
@@ -310,7 +306,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
               variant="secondary"
               onClick={handleAskQuestion}
               leftIcon={<MessageSquare className="w-4 h-4" />}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-[#1E5A28]/40 border border-white/20 text-[#F0FDF4] hover:bg-[#1E5A28]/60 hover:border-white/30"
               aria-label={t('recommendationCard.askQuestion')}
             >
               {t('recommendationCard.askQuestion')}

@@ -38,7 +38,7 @@ export const DataFreshness: React.FC<DataFreshnessProps> = ({
 
       <span>
         {isStale ? 'Stale feed: ' : 'as of '}
-        <span className="text-text-main">{timestamp}</span>
+        <span className="text-current font-medium">{timestamp}</span>
       </span>
 
       {source && (
