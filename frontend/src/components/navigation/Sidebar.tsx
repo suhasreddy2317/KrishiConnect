@@ -106,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )
           }
           style={({ isActive }: { isActive?: boolean }) => ({
-            color: isActive ? palette.accent : undefined,
+            color: isActive ? '#FFFFFF' : undefined,
             backgroundColor: isActive ? palette.primary : undefined,
             borderColor: isActive ? palette.border : undefined,
           })}
@@ -133,11 +133,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={item.path}
                 className="flex items-center space-x-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors select-none text-left border font-semibold cursor-pointer"
-                style={{ backgroundColor: palette.primary, color: palette.accent, borderColor: palette.border }}
+                style={{ backgroundColor: palette.primary, color: '#FFFFFF', borderColor: palette.border }}
                 onClick={() => onSelectSubTab?.(item.path)}
                 title={isCollapsed ? item.name : undefined}
               >
-                <Icon className="w-4 h-4 shrink-0" style={{ color: palette.accent }} />
+                <Icon className="w-4 h-4 shrink-0" style={{ color: '#FFFFFF' }} />
                 {!isCollapsed && <span className="truncate">{item.name}</span>}
               </div>
             );
