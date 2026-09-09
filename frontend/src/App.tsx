@@ -11,11 +11,13 @@ import { BuyerPage } from '@/pages/BuyerPage';
 import { FieldAgentPage } from '@/pages/FieldAgentPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { LanguageProvider } from '@/i18n/LanguageContext';
+import { SplashScreen } from '@/components/SplashScreen';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <LanguageProvider>
+        <SplashScreen />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
