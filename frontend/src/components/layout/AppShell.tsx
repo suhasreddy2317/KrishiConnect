@@ -80,11 +80,6 @@ export const AppShell: React.FC<AppShellProps> = ({
               <Activity className="w-3.5 h-3.5 text-status-success" />
               <span>KrishiConnect • Trust Ledger Operating System</span>
             </div>
-            <div className="font-mono text-[11px] flex items-center space-x-4">
-              <span>Theme: Trust Ledger</span>
-              <span>•</span>
-              <span style={{ color: palette.accent }}>{roleConfig.shortName} Phase 1</span>
-            </div>
           </div>
         </footer>
       </div>

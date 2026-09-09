@@ -705,7 +705,7 @@ export const AdminPage: React.FC = () => {
           <div className="flex items-start space-x-4">
             <Lock className="w-5 h-5 text-accent mt-0.5 shrink-0" />
             <div className="space-y-1 text-sm">
-              <h3 className="font-semibold text-text-main">Admin Security & Privacy Rules (RULES.md Section 2 & 15)</h3>
+              <h3 className="font-semibold text-text-main">Admin Security & Privacy Rules</h3>
               <p className="text-text-muted leading-relaxed">
                 Admins have elevated privileges for dispute mediation and KYC approval, but may not view user payment or contact details outside an active dispute investigation. All administrative actions require an explicit audit justification that is permanently written to the ledger.
               </p>

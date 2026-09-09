@@ -666,7 +666,7 @@ export const FpoPage: React.FC = () => {
             <div className="space-y-2">
               <div className="text-sm font-semibold text-text-main">FPO Collective Bargaining Rules</div>
               <div className="text-xs text-text-muted leading-relaxed">
-                Bulk pricing, quality standards, and delivery terms follow FPO bye-laws (RULES.md Section 6 & 7). These terms are automatically appended to all pooled-lot RFQs and member payout calculations.
+                Bulk pricing, quality standards, and delivery terms follow FPO bye-laws. These terms are automatically appended to all pooled-lot RFQs and member payout calculations.
               </div>
             </div>
           </div>

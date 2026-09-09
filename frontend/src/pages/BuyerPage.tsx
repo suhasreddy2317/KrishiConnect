@@ -14,7 +14,6 @@ import { StatusBadge } from '@/components/status/StatusBadge';
 import { SyncStatus } from '@/components/status/SyncStatus';
 import { DataFreshness } from '@/components/status/DataFreshness';
 import { StatusSteps } from '@/components/status/StatusSteps';
-import { AlertBanner } from '@/components/status/AlertBanner';
 import { Timeline } from '@/components/status/Timeline';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Table } from '@/components/data-display/Table';
@@ -1530,12 +1529,6 @@ export const BuyerPage: React.FC = () => {
               Post Demand RFQ
             </Button>
           }
-        />
-
-        <AlertBanner
-          variant="info"
-          title="Phase 1 Foundation"
-          message="Buyer demand posting, lot matching, offer negotiation, and transaction business logic will be implemented in later phases. This dashboard shows the intended shell and static data model."
         />
 
         {activeTab === '/buyer' && (

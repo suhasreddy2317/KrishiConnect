@@ -71,19 +71,14 @@ export const AppLayout: React.FC = () => {
                 <div className="w-9 h-9 rounded-md bg-primary border border-border flex items-center justify-center text-white font-mono font-bold text-lg shadow-sm group-hover:border-accent transition-colors">
                   KC
                 </div>
-                <div>
-                  <div className="flex items-center space-x-2">
+                  <div>
                     <span className="font-semibold tracking-tight text-text-main group-hover:text-primary transition-colors">
                       KrishiConnect
                     </span>
-                    <span className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-surface-raised text-text-muted border border-border">
-                      Phase 1
-                    </span>
+                    <p className="text-[11px] text-text-muted leading-none hidden sm:block">
+                      AgriPulse Exchange • Trust Ledger
+                    </p>
                   </div>
-                  <p className="text-[11px] text-text-muted leading-none hidden sm:block">
-                    AgriPulse Exchange • Trust Ledger
-                  </p>
-                </div>
               </NavLink>
             </div>
 
@@ -221,17 +216,10 @@ export const AppLayout: React.FC = () => {
       </main>
 
       <footer className="border-t border-border bg-background py-6 text-xs text-text-muted">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Activity className="w-3.5 h-3.5 text-status-success" />
-            <span>KrishiConnect Decision Engine • SIH Prototype</span>
-          </div>
-          <div className="font-mono text-[11px] flex items-center space-x-4">
-            <span>Theme: Trust Ledger</span>
-            <span>•</span>
-            <span>DB: SQLite (Portable)</span>
-            <span>•</span>
-            <span className="text-accent">Phase 1 Foundation</span>
+            <span>KrishiConnect • Trust Ledger</span>
           </div>
         </div>
       </footer>

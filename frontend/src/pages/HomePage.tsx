@@ -10,7 +10,6 @@ import {
   Database,
   Cpu,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Card } from '@/components/ui/Card';
@@ -102,9 +101,6 @@ export const HomePage: React.FC = () => {
 
         <div className="max-w-3xl space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="lime" icon={<Sparkles className="w-3 h-3" />}>
-              Phase 1 Foundation
-            </Badge>
             <StatusBadge status="verified-buyer" label="Trust Ledger OS" size="sm" />
           </div>
 
@@ -143,13 +139,10 @@ export const HomePage: React.FC = () => {
           label="Supported Roles"
           value="5"
           unit="Active Shells"
-          timestamp="Phase 2 Foundation"
         />
         <MetricCard
           label="Design Aesthetic"
           value="Trust Ledger"
-          unit="Light Theme"
-          change={{ value: 'WCAG AA', isPositive: true }}
         />
         <MetricCard
           label="Decision Accuracy"
@@ -229,20 +222,7 @@ export const HomePage: React.FC = () => {
             );
           })}
         </div>
-      </div>
-
-      <Card variant="raised" padding="lg" className="space-y-4">
-        <h3 className="text-base font-semibold text-text-main">
-          Decision-Support vs. Transaction Execution (RULES.md Section 1)
-        </h3>
-        <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
-          In KrishiConnect, market intelligence and decision support (Sale Window Score, Demand Radar)
-          are always accessible independently. A farmer may consult prices, compare nearby mandis, and
-          review recommendations without listing a lot. When a sale decision is made, every step—from
-          lot creation, buyer matching, offers, logistics, through to payment—is permanently anchored to
-          the price benchmark and recommendation at the time of agreement.
-        </p>
-      </Card>
+       </div>
     </PageContainer>
   );
 };
