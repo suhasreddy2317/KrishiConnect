@@ -8,6 +8,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Activity } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export interface AppShellProps {
   forcedRole?: UserRole;
@@ -24,6 +25,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useLanguage();
 
   const detectRole = (): UserRole => {
     if (forcedRole) return forcedRole;
@@ -40,6 +42,13 @@ export const AppShell: React.FC<AppShellProps> = ({
   const roleConfig = ROLE_CONFIGS[currentRole];
   const isFarmer = currentRole === 'farmer';
   const palette = roleConfig.palette;
+
+  const translatedTitle = isFarmer && roleConfig.title === 'Farmer Workspace'
+    ? t('nav.farmerWorkspace')
+    : roleConfig.title;
+  const translatedTagline = isFarmer && roleConfig.tagline === 'Decision-first crop selling & trust verification'
+    ? t('nav.farmerTerminal')
+    : roleConfig.tagline;
 
   return (
     <div
@@ -60,7 +69,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       <div className="flex-1 flex flex-col min-w-0">
         <TopHeader
           currentRole={currentRole}
-          title={roleConfig.title}
+          title={translatedTitle}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
@@ -87,13 +96,13 @@ export const AppShell: React.FC<AppShellProps> = ({
       <Drawer
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        title={`${roleConfig.shortName} Navigation`}
-        description={roleConfig.tagline}
+        title={isFarmer ? t('nav.farmerMode') : `${roleConfig.shortName} Navigation`}
+        description={translatedTagline}
         position="right"
       >
         <div className="space-y-4">
           <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-text-muted border-b border-border">
-            Destinations
+            {t('nav.destinations')}
           </div>
 
           <div className="space-y-1">
@@ -109,12 +118,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                 )
               }
             >
-              <span>Platform Hub</span>
+              <span>{t('nav.platformHub')}</span>
             </NavLink>
 
             {roleConfig.navItems.map((item) => {
               const Icon = item.icon;
               const isSelected = activeSubTab === item.path;
+              const label = item.nameKey ? t(item.nameKey) : item.name;
 
               return (
                 <button
@@ -133,7 +143,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <Icon className="w-4 h-4" style={{ color: isSelected ? palette.accent : undefined }} />
-                    <span>{item.name}</span>
+                    <span>{label}</span>
                   </div>
                   {item.badge && (
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-raised text-text-muted">

@@ -148,7 +148,7 @@ interface BackendDispute {
 
 export const FarmerPage: React.FC = () => {
   const { token } = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak } = useTextToSpeech();
   const [activeTab, setActiveTab] = useState<TabId>('/farmer');
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
@@ -230,14 +230,14 @@ export const FarmerPage: React.FC = () => {
   );
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: '/farmer', label: 'Decision Home' },
-    { id: '/farmer/market', label: 'Nearby Mandis' },
-    { id: '/farmer/lots', label: 'My Lots', count: lots.length || undefined },
-    { id: '/farmer/offers', label: 'Offers', count: offers.length || undefined },
-    { id: '/farmer/transactions', label: 'Transactions', count: transactions.length || undefined },
-    { id: '/farmer/shipments', label: 'Shipments', count: shipments.length || undefined },
-    { id: '/farmer/payments', label: 'Payments', count: payments.length || undefined },
-    { id: '/farmer/disputes', label: 'Disputes', count: disputes.length || undefined },
+    { id: '/farmer', label: t('dashboard.decisionHome') },
+    { id: '/farmer/market', label: t('dashboard.nearbyMandis') },
+    { id: '/farmer/lots', label: t('dashboard.myLots'), count: lots.length || undefined },
+    { id: '/farmer/offers', label: t('dashboard.offers'), count: offers.length || undefined },
+    { id: '/farmer/transactions', label: t('dashboard.transactions'), count: transactions.length || undefined },
+    { id: '/farmer/shipments', label: t('dashboard.shipments'), count: shipments.length || undefined },
+    { id: '/farmer/payments', label: t('dashboard.payments'), count: payments.length || undefined },
+    { id: '/farmer/disputes', label: t('dashboard.disputes'), count: disputes.length || undefined },
   ];
 
   useEffect(() => {
@@ -353,11 +353,11 @@ export const FarmerPage: React.FC = () => {
   const validateLotForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!lotCrop) errors.crop = 'Crop is required';
-    if (!lotQuantity || parseFloat(lotQuantity) <= 0) errors.quantity = 'Quantity must be greater than 0';
-    if (!lotQualityGrade.trim()) errors.qualityGrade = 'Quality grade is required';
-    if (lotMoisture && parseFloat(lotMoisture) < 0) errors.moisture = 'Moisture cannot be negative';
-    if (lotExpectedPrice && parseFloat(lotExpectedPrice) < 0) errors.expectedPrice = 'Price cannot be negative';
+    if (!lotCrop) errors.crop = t('farmerPage.lotForm.cropRequired');
+    if (!lotQuantity || parseFloat(lotQuantity) <= 0) errors.quantity = t('farmerPage.lotForm.quantityRequired');
+    if (!lotQualityGrade.trim()) errors.qualityGrade = t('farmerPage.lotForm.qualityGradeRequired');
+    if (lotMoisture && parseFloat(lotMoisture) < 0) errors.moisture = t('farmerPage.lotForm.moistureNegative');
+    if (lotExpectedPrice && parseFloat(lotExpectedPrice) < 0) errors.expectedPrice = t('farmerPage.lotForm.priceNegative');
 
     setLotFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -699,17 +699,17 @@ export const FarmerPage: React.FC = () => {
         {recommendationError && (
           <div className="p-3 rounded-xl bg-status-warning/10 border border-status-warning/30 flex items-start justify-between gap-3">
             <p className="text-xs text-status-warning">{recommendationError}</p>
-            <Button size="sm" variant="ghost" onClick={fetchRecommendation}>Retry</Button>
+            <Button size="sm" variant="ghost" onClick={fetchRecommendation}>{t('common.retry')}</Button>
           </div>
         )}
 
         {isDemoNoticeVisible && lots.length === 0 && (
           <div className="p-3 rounded-xl bg-surface-raised border border-border/40 flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-status-warning">Demo Data Notice</span>
-              <p className="text-xs text-text-muted">Market intelligence and recommendation cards show seeded demo data. Publish a produce lot to receive a live recommendation.</p>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-status-warning">{t('farmerPage.demoNotice')}</span>
+              <p className="text-xs text-text-muted">{t('farmerPage.demoNoticeDescription')}</p>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => setIsDemoNoticeVisible(false)}>Dismiss</Button>
+            <Button size="sm" variant="ghost" onClick={() => setIsDemoNoticeVisible(false)}>{t('common.dismiss')}</Button>
           </div>
         )}
 
@@ -718,9 +718,9 @@ export const FarmerPage: React.FC = () => {
             <HelpCircle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-accent">Farmer Operating Principle</span>
-            <h2 className="text-lg font-semibold text-text-main">"What should I do right now, and why?"</h2>
-            <p className="text-xs text-text-muted">Every recommendation below is inspectable with plain-language market factors.</p>
+            <span className="text-[11px] font-mono uppercase tracking-wider text-accent">{t('farmerPage.farmerOperatingPrinciple')}</span>
+            <h2 className="text-lg font-semibold text-text-main">"{t('farmerPage.principleTitle')}"</h2>
+            <p className="text-xs text-text-muted">{t('farmerPage.principleDescription')}</p>
           </div>
         </div>
 
@@ -746,22 +746,22 @@ export const FarmerPage: React.FC = () => {
         />
 
         {activeTransaction && (
-          <Card variant="default" title={`Active Transaction: Lot #KC-${activeTransaction.lot_id}`} subtitle={`Transaction #${activeTransaction.id}`} headerAction={<StatusBadge status="verified-buyer" label={activeTransaction.status} size="sm" />}>
+          <Card variant="default" title={t('farmerPage.activeTransaction', { lotId: activeTransaction.lot_id })} subtitle={t('farmerPage.transactionNumber', { id: activeTransaction.id })} headerAction={<StatusBadge status="verified-buyer" label={activeTransaction.status} size="sm" />}>
             <StatusSteps
               steps={[
-                { id: '1', label: 'Offer Accepted', sublabel: `₹${activeTransaction.agreed_price}/qtl`, status: 'complete' },
-                { id: '2', label: 'Confirmed', sublabel: activeTransaction.confirmed_at ? new Date(activeTransaction.confirmed_at).toLocaleDateString() : '—', status: activeTransaction.status === 'confirmed' || activeTransaction.status === 'dispatched' || activeTransaction.status === 'in_transit' || activeTransaction.status === 'delivered' || activeTransaction.status === 'payment_pending' || activeTransaction.status === 'completed' ? 'complete' : 'pending' },
-                { id: '3', label: 'Dispatched', sublabel: '—', status: ['dispatched', 'in_transit', 'delivered', 'payment_pending', 'completed'].includes(activeTransaction.status as any) ? 'complete' : 'pending' },
-                { id: '4', label: 'Delivered', sublabel: '—', status: ['delivered', 'payment_pending', 'completed'].includes(activeTransaction.status as any) ? 'complete' : 'pending' },
-                { id: '5', label: 'Payment', sublabel: '—', status: activeTransaction.status === 'completed' ? 'complete' : 'pending' },
+                { id: '1', label: t('farmerPage.statusSteps.offerAccepted'), sublabel: `₹${activeTransaction.agreed_price}/qtl`, status: 'complete' },
+                { id: '2', label: t('farmerPage.statusSteps.confirmed'), sublabel: activeTransaction.confirmed_at ? new Date(activeTransaction.confirmed_at).toLocaleDateString() : '—', status: activeTransaction.status === 'confirmed' || activeTransaction.status === 'dispatched' || activeTransaction.status === 'in_transit' || activeTransaction.status === 'delivered' || activeTransaction.status === 'payment_pending' || activeTransaction.status === 'completed' ? 'complete' : 'pending' },
+                { id: '3', label: t('farmerPage.statusSteps.dispatched'), sublabel: '—', status: ['dispatched', 'in_transit', 'delivered', 'payment_pending', 'completed'].includes(activeTransaction.status as any) ? 'complete' : 'pending' },
+                { id: '4', label: t('farmerPage.statusSteps.delivered'), sublabel: '—', status: ['delivered', 'payment_pending', 'completed'].includes(activeTransaction.status as any) ? 'complete' : 'pending' },
+                { id: '5', label: t('farmerPage.statusSteps.payment'), sublabel: '—', status: activeTransaction.status === 'completed' ? 'complete' : 'pending' },
               ]}
             />
             <div className="mt-4 flex flex-wrap gap-2">
               {(NEXT_TRANSITION[activeTransaction.status] || []).map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateTransactionStatus(activeTransaction.id, next, activeTransaction.status)}>Mark {next}</Button>
+                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateTransactionStatus(activeTransaction.id, next, activeTransaction.status)}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
               {activeTransaction.status !== 'completed' && (
-                <Button size="sm" variant="destructive" onClick={() => handleOpenDispute(activeTransaction.id)}>Open Dispute</Button>
+                <Button size="sm" variant="destructive" onClick={() => handleOpenDispute(activeTransaction.id)}>{t('farmerPage.openDispute')}</Button>
               )}
             </div>
           </Card>
@@ -770,10 +770,10 @@ export const FarmerPage: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-text-main">Nearby Mandi Price Benchmarks</h3>
-              <p className="text-xs text-text-muted">Comparing prices within 40 km economic transport radius.</p>
+              <h3 className="text-base font-semibold text-text-main">{t('farmerPage.nearbyMandiBenchmarks')}</h3>
+              <p className="text-xs text-text-muted">{t('farmerPage.comparingPrices')}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('/farmer/market')}>View All Mandis</Button>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab('/farmer/market')}>{t('farmerPage.viewAllMandis')}</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MarketCard mandiName="Lasalgaon APMC" distanceKm={18} commodity="Red Onion" modalPrice={2450} trendPercentage={4.8} timestamp="12m ago" isBestRealized onSelectMandi={() => {}} />
@@ -800,9 +800,9 @@ export const FarmerPage: React.FC = () => {
   );
 
   const renderLotsTab = () => {
-    if (lotsLoading) return <LoadingState message="Loading your produce lots..." />;
-    if (lotsError) return <ErrorState title="Unable to load lots" message={lotsError} onRetry={fetchLots} />;
-    if (lots.length === 0) return <EmptyState icon={<Package className="w-6 h-6" />} title="No lots published" description="Create a produce lot to start receiving buyer offers and matches." actionLabel="Create Lot" onAction={() => setIsLotDrawerOpen(true)} />;
+    if (lotsLoading) return <LoadingState message={t('farmerPage.lots.loading')} />;
+    if (lotsError) return <ErrorState title={t('farmerPage.lots.loadError')} message={lotsError} onRetry={fetchLots} />;
+    if (lots.length === 0) return <EmptyState icon={<Package className="w-6 h-6" />} title={t('farmerPage.lots.noLots')} description={t('farmerPage.lots.noLotsDescription')} actionLabel={t('farmerPage.lots.createLotAction')} onAction={() => setIsLotDrawerOpen(true)} />;
 
     const farmerLots = lots;
     return (
@@ -811,7 +811,7 @@ export const FarmerPage: React.FC = () => {
           <Card key={lot.id} variant="default" title={lot.crop} subtitle={`${lot.quantity_kg} ${lot.unit} • Grade ${lot.quality_grade}`} headerAction={<StatusBadge status="grade" label={lot.quality_grade} size="sm" />}>
             <div className="flex items-center justify-between">
               <div className="text-xs text-text-muted font-mono">Lot ID: #{lot.id} • Status: {lot.status} {lot.harvest_date ? `• Harvest: ${lot.harvest_date}` : ''} {lot.location ? `• ${lot.location}` : ''}</div>
-              <Button size="sm" variant="outline" onClick={() => { setSelectedLotId(lot.id); setActiveTab('/farmer/offers'); }}>View Offers</Button>
+              <Button size="sm" variant="outline" onClick={() => { setSelectedLotId(lot.id); setActiveTab('/farmer/offers'); }}>{t('farmerPage.lots.viewOffers')}</Button>
             </div>
           </Card>
         ))}
@@ -820,18 +820,16 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderOffersTab = () => {
-    if (offersLoading) return <LoadingState message="Loading buyer offers..." />;
-    if (offersError) return <ErrorState title="Unable to load offers" message={offersError} onRetry={fetchOffers} />;
+    if (offersLoading) return <LoadingState message={t('farmerPage.offers.loading')} />;
+    if (offersError) return <ErrorState title={t('farmerPage.offers.loadError')} message={offersError} onRetry={fetchOffers} />;
 
     const filteredOffers = selectedLotId ? offers.filter(offer => offer.lot_id === selectedLotId) : offers;
 
     if (filteredOffers.length === 0) {
       if (selectedLotId) {
-        const lot = lots.find(l => l.id === selectedLotId);
-        const lotLabel = lot ? `Lot #${selectedLotId} (${lot.crop})` : `Lot #${selectedLotId}`;
-        return <EmptyState icon={<Clock className="w-6 h-6" />} title={`No offers yet for ${lotLabel}.`} description="Published lots will receive structured buyer offers with 48h locking expiry." />;
+        return <EmptyState icon={<Clock className="w-6 h-6" />} title={t('farmerPage.offers.noOffersForLot', { lotId: selectedLotId })} description={t('farmerPage.offers.noOffersDescription')} />;
       }
-      return <EmptyState icon={<Clock className="w-6 h-6" />} title="No offers yet" description="Published lots will receive structured buyer offers with 48h locking expiry." />;
+      return <EmptyState icon={<Clock className="w-6 h-6" />} title={t('farmerPage.offers.noOffers')} description={t('farmerPage.offers.noOffersDescriptionShort')} />;
     }
 
     return (
@@ -850,12 +848,12 @@ export const FarmerPage: React.FC = () => {
             <div className="flex items-center gap-2">
               {offer.status !== 'accepted' && offer.status !== 'rejected' && offer.status !== 'expired' && offer.round % 2 === 1 && (
                 <>
-                  <Button size="sm" variant="primary" onClick={() => handleAcceptOffer(offer)}>Accept Offer</Button>
-                  <Button size="sm" variant="outline" onClick={() => handleCounterOffer(offer)}>Counter</Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleRejectOffer(offer)}>Reject</Button>
+                  <Button size="sm" variant="primary" onClick={() => handleAcceptOffer(offer)}>{t('farmerPage.offers.acceptOffer')}</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleCounterOffer(offer)}>{t('farmerPage.offers.counter')}</Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleRejectOffer(offer)}>{t('farmerPage.offers.reject')}</Button>
                 </>
               )}
-              {offer.status === 'accepted' && <Button size="sm" variant="ghost" onClick={() => setActiveTab('/farmer/transactions')}>View Transaction</Button>}
+              {offer.status === 'accepted' && <Button size="sm" variant="ghost" onClick={() => setActiveTab('/farmer/transactions')}>{t('farmerPage.offers.viewTransaction')}</Button>}
             </div>
           </div>
         ))}
@@ -864,9 +862,9 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderTransactionsTab = () => {
-    if (transactionsLoading) return <LoadingState message="Loading transactions..." />;
-    if (transactionsError) return <ErrorState title="Unable to load transactions" message={transactionsError} onRetry={fetchTransactions} />;
-    if (transactions.length === 0) return <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title="No transactions" description="Accepted offers become transactions with full settlement tracking." />;
+    if (transactionsLoading) return <LoadingState message={t('farmerPage.transactions.loading')} />;
+    if (transactionsError) return <ErrorState title={t('farmerPage.transactions.loadError')} message={transactionsError} onRetry={fetchTransactions} />;
+    if (transactions.length === 0) return <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title={t('farmerPage.transactions.noTransactions')} description={t('farmerPage.transactions.noTransactionsDescription')} />;
 
     return (
       <div className="space-y-4">
@@ -878,9 +876,9 @@ export const FarmerPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {(NEXT_TRANSITION[tx.status] || []).map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateTransactionStatus(tx.id, next, tx.status)}>Mark {next}</Button>
+                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateTransactionStatus(tx.id, next, tx.status)}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
-              <Button size="sm" variant="destructive" onClick={() => handleOpenDispute(tx.id)}>Open Dispute</Button>
+              <Button size="sm" variant="destructive" onClick={() => handleOpenDispute(tx.id)}>{t('farmerPage.openDispute')}</Button>
             </div>
           </Card>
         ))}
@@ -889,9 +887,9 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderShipmentsTab = () => {
-    if (shipmentsLoading) return <LoadingState message="Loading shipments..." />;
-    if (shipmentsError) return <ErrorState title="Unable to load shipments" message={shipmentsError} onRetry={fetchShipments} />;
-    if (shipments.length === 0) return <EmptyState icon={<Truck className="w-6 h-6" />} title="No shipments" description="Shipments are created after offer acceptance and transaction confirmation." />;
+    if (shipmentsLoading) return <LoadingState message={t('farmerPage.shipments.loading')} />;
+    if (shipmentsError) return <ErrorState title={t('farmerPage.shipments.loadError')} message={shipmentsError} onRetry={fetchShipments} />;
+    if (shipments.length === 0) return <EmptyState icon={<Truck className="w-6 h-6" />} title={t('farmerPage.shipments.noShipments')} description={t('farmerPage.shipments.noShipmentsDescription')} />;
 
     return (
       <div className="space-y-4">
@@ -905,7 +903,7 @@ export const FarmerPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {shipment.status !== 'completed' && (NEXT_SHIPMENT_TRANSITION[shipment.status] || []).map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateShipmentStatus(shipment.id, next)}>Mark {next}</Button>
+                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateShipmentStatus(shipment.id, next)}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
             </div>
           </Card>
@@ -915,9 +913,9 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderPaymentsTab = () => {
-    if (paymentsLoading) return <LoadingState message="Loading payments..." />;
-    if (paymentsError) return <ErrorState title="Unable to load payments" message={paymentsError} onRetry={fetchPayments} />;
-    if (payments.length === 0) return <EmptyState icon={<Wallet className="w-6 h-6" />} title="No payments" description="Payments are initiated after delivery confirmation." />;
+    if (paymentsLoading) return <LoadingState message={t('farmerPage.payments.loading')} />;
+    if (paymentsError) return <ErrorState title={t('farmerPage.payments.loadError')} message={paymentsError} onRetry={fetchPayments} />;
+    if (payments.length === 0) return <EmptyState icon={<Wallet className="w-6 h-6" />} title={t('farmerPage.payments.noPayments')} description={t('farmerPage.payments.noPaymentsDescription')} />;
 
     return (
       <div className="space-y-4">
@@ -930,7 +928,7 @@ export const FarmerPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {['processing', 'completed', 'failed'].map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdatePaymentStatus(payment.id, next)}>Mark {next}</Button>
+                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdatePaymentStatus(payment.id, next)}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
             </div>
           </Card>
@@ -940,9 +938,9 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderDisputesTab = () => {
-    if (disputesLoading) return <LoadingState message="Loading disputes..." />;
-    if (disputesError) return <ErrorState title="Unable to load disputes" message={disputesError} onRetry={fetchDisputes} />;
-    if (disputes.length === 0) return <EmptyState icon={<AlertTriangle className="w-6 h-6" />} title="No disputes" description="Disputes can be opened if delivery or quality does not match agreed terms." />;
+    if (disputesLoading) return <LoadingState message={t('farmerPage.disputes.loading')} />;
+    if (disputesError) return <ErrorState title={t('farmerPage.disputes.loadError')} message={disputesError} onRetry={fetchDisputes} />;
+    if (disputes.length === 0) return <EmptyState icon={<AlertTriangle className="w-6 h-6" />} title={t('farmerPage.disputes.noDisputes')} description={t('farmerPage.disputes.noDisputesDescription')} />;
 
     return (
       <div className="space-y-4">
@@ -955,14 +953,14 @@ export const FarmerPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {['under_review', 'resolved'].map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => requestConfirm(`Update dispute status to ${next}?`, async () => {
+                <Button key={next} size="sm" variant="outline" onClick={() => requestConfirm(`${t('farmerPage.markStatus', { status: next })}?`, async () => {
                   try {
                     await apiRequest(`/disputes/${dispute.id}/status`, { method: 'PATCH', body: JSON.stringify({ status: next, resolution_notes: 'Updated from farmer dashboard' }) }, token!);
                     await fetchDisputes();
                   } catch (err) {
                     setDisputesError(err instanceof Error ? err.message : 'Failed to update dispute');
                   }
-                })}>Mark {next}</Button>
+                })}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
             </div>
           </Card>
@@ -975,13 +973,13 @@ export const FarmerPage: React.FC = () => {
     <AppShell forcedRole="farmer" activeSubTab={activeTab} onSelectSubTab={(path) => { setSelectedLotId(null); setActiveTab(path as TabId); }}>
       <MobileStack spacing="md">
         <PageHeader
-          title="Farmer Decision Workspace"
-          subtitle="Daily harvest timing, net realized prices, and verified buyer matching."
-          roleBadge={<StatusBadge status="active" label="Farmer Mode" size="sm" />}
+          title={t('farmerPage.pageTitle')}
+          subtitle={t('farmerPage.pageSubtitle')}
+          roleBadge={<StatusBadge status="active" label={t('nav.farmerMode')} size="sm" />}
           statusBadge={<SyncStatus state="Synced" lastSyncedTime="2m ago" />}
           primaryAction={
             <Button variant="primary" size="md" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsLotDrawerOpen(true)}>
-              Add Produce Lot
+              {t('farmerPage.addProduceLot')}
             </Button>
           }
         />
@@ -998,7 +996,7 @@ export const FarmerPage: React.FC = () => {
         {activeTab === '/farmer/disputes' && renderDisputesTab()}
       </MobileStack>
 
-      <Drawer isOpen={isLotDrawerOpen} onClose={() => setIsLotDrawerOpen(false)} title="Create Produce Lot" description="Provide crop specifications, estimated quantity, and provisional photos." position="bottom">
+      <Drawer isOpen={isLotDrawerOpen} onClose={() => setIsLotDrawerOpen(false)} title={t('farmerPage.createProduceLot')} description={t('farmerPage.createProduceLotDescription')} position="bottom">
         <div className="space-y-4">
           {lotSubmitError && (
             <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/30 text-xs text-status-error">
@@ -1007,8 +1005,8 @@ export const FarmerPage: React.FC = () => {
           )}
 
           <Select
-            label="Crop / Commodity"
-            helperText="Select the crop you want to sell"
+            label={t('farmerPage.lotForm.cropCommodity')}
+            helperText={t('farmerPage.lotForm.selectCropHelper')}
             error={lotFormErrors.crop}
             options={[
               { value: '', label: 'Select crop...', disabled: true },
@@ -1023,8 +1021,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Quantity (kg)"
-            helperText="Total quantity available"
+            label={t('farmerPage.lotForm.quantity')}
+            helperText={t('farmerPage.lotForm.quantityHelper')}
             error={lotFormErrors.quantity}
             type="number"
             min="0"
@@ -1039,8 +1037,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Quality Grade"
-            helperText="e.g. Grade A, Grade B"
+            label={t('farmerPage.lotForm.qualityGrade')}
+            helperText={t('farmerPage.lotForm.qualityGradeHelper')}
             error={lotFormErrors.qualityGrade}
             placeholder="e.g. Grade A"
             value={lotQualityGrade}
@@ -1052,8 +1050,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Moisture %"
-            helperText="Optional"
+            label={t('farmerPage.lotForm.moisture')}
+            helperText={t('common.optional')}
             error={lotFormErrors.moisture}
             type="number"
             min="0"
@@ -1068,8 +1066,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Harvest Date"
-            helperText="Optional"
+            label={t('farmerPage.lotForm.harvestDate')}
+            helperText={t('common.optional')}
             error={lotFormErrors.harvestDate}
             type="date"
             value={lotHarvestDate}
@@ -1081,8 +1079,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Location"
-            helperText="Optional"
+            label={t('farmerPage.lotForm.location')}
+            helperText={t('common.optional')}
             error={lotFormErrors.location}
             placeholder="e.g. Nashik"
             value={lotLocation}
@@ -1094,8 +1092,8 @@ export const FarmerPage: React.FC = () => {
           />
 
           <Input
-            label="Expected Price / kg"
-            helperText="Optional"
+            label={t('farmerPage.lotForm.expectedPrice')}
+            helperText={t('farmerPage.lotForm.expectedPriceHelper')}
             error={lotFormErrors.expectedPrice}
             type="number"
             min="0"
@@ -1117,7 +1115,7 @@ export const FarmerPage: React.FC = () => {
               isLoading={lotSubmitting}
               disabled={lotSubmitting}
             >
-              Create Lot
+              {t('farmerPage.createLot')}
             </Button>
             <Button
               variant="secondary"
@@ -1135,13 +1133,13 @@ export const FarmerPage: React.FC = () => {
               }}
               disabled={lotSubmitting}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
       </Drawer>
 
-      <Dialog isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Confirm Action" description={confirmMessage} maxWidth="sm" footer={
+      <Dialog isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title={t('farmerPage.confirmAction')} description={confirmMessage} maxWidth="sm" footer={
         <div className="flex items-center justify-end gap-3">
           <Button variant="ghost" onClick={() => setIsConfirmOpen(false)}>Cancel</Button>
           <Button variant="primary" onClick={() => { confirmAction?.(); setIsConfirmOpen(false); }}>Confirm</Button>

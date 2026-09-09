@@ -4,7 +4,7 @@ import { Language, t } from './index';
 interface LanguageContextValue {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -38,7 +38,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     sessionStorage.setItem('krishiconnect-language', language);
   }, [language]);
 
-  const translate = (key: string) => t(key, language);
+  const translate = (key: string, params?: Record<string, string | number>) => t(key, language, params);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t: translate }}>

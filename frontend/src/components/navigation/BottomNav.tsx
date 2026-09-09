@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { NavItemConfig } from '@/config/navigation';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export interface BottomNavProps {
   items: NavItemConfig[];
@@ -13,8 +14,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   items,
   activePath,
   onSelect,
-  className,
+  className = '',
 }) => {
+  const { t } = useLanguage();
+
+  const resolveLabel = (item: NavItemConfig): string => {
+    if (item.nameKey) return t(item.nameKey);
+    return item.name || '';
+  };
   return (
     <nav
       aria-label="Mobile Navigation"
@@ -26,6 +33,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = activePath === item.path;
+        const label = resolveLabel(item);
 
         return (
           <button
@@ -49,7 +57,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 isActive && 'font-bold'
               )}
             >
-              {item.name}
+              {label}
             </span>
           </button>
         );

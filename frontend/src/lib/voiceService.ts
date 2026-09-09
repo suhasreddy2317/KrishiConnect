@@ -170,15 +170,6 @@ export async function processVoiceQuery(
 ): Promise<VoiceResponse> {
   const { intent, crop } = detectIntent(query);
 
-  if (intent === 'unknown') {
-    return {
-      intent: 'unknown',
-      text: 'Try asking about today\'s price, when to sell, your lots, buyers, or payments.',
-      data: null,
-      action_hint: null,
-    };
-  }
-
   if (!ctx.token) {
     return {
       intent,

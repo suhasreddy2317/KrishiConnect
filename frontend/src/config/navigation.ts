@@ -26,11 +26,13 @@ import {
 export type UserRole = 'farmer' | 'fpo' | 'buyer' | 'field-agent' | 'admin';
 
 export interface NavItemConfig {
-  name: string;
+  name?: string;
+  nameKey?: string;
   path: string;
   icon: React.ElementType;
   badge?: string;
   description?: string;
+  descriptionKey?: string;
 }
 
 export interface RolePalette {
@@ -77,18 +79,18 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       border: '#C8E6C9',
     },
     navItems: [
-      { name: 'Home', path: '/farmer', icon: Home, description: 'Daily Decision Overview' },
-      { name: 'Market', path: '/farmer/market', icon: TrendingUp, description: 'Mandi Price Benchmarks' },
-      { name: 'My Lots', path: '/farmer/lots', icon: Package, description: 'Produce Lots & Grading' },
-      { name: 'Offers', path: '/farmer/offers', icon: Clock, description: 'Buyer Negotiations' },
-      { name: 'Profile', path: '/farmer/profile', icon: User, description: 'Farm & Bank Details' },
+      { nameKey: 'nav.home', path: '/farmer', icon: Home, descriptionKey: 'nav.dailyDecisionOverview' },
+      { nameKey: 'nav.market', path: '/farmer/market', icon: TrendingUp, descriptionKey: 'nav.mandiPriceBenchmarks' },
+      { nameKey: 'nav.myLots', path: '/farmer/lots', icon: Package, descriptionKey: 'nav.produceLotsGrading' },
+      { nameKey: 'nav.offers', path: '/farmer/offers', icon: Clock, descriptionKey: 'nav.buyerNegotiations' },
+      { nameKey: 'nav.profile', path: '/farmer/profile', icon: User, descriptionKey: 'nav.farmBankDetails' },
     ],
     bottomNavItems: [
-      { name: 'Home', path: '/farmer', icon: Home },
-      { name: 'Market', path: '/farmer/market', icon: TrendingUp },
-      { name: 'My Lots', path: '/farmer/lots', icon: Package },
-      { name: 'Offers', path: '/farmer/offers', icon: Clock },
-      { name: 'Profile', path: '/farmer/profile', icon: User },
+      { nameKey: 'nav.home', path: '/farmer', icon: Home },
+      { nameKey: 'nav.market', path: '/farmer/market', icon: TrendingUp },
+      { nameKey: 'nav.myLots', path: '/farmer/lots', icon: Package },
+      { nameKey: 'nav.offers', path: '/farmer/offers', icon: Clock },
+      { nameKey: 'nav.profile', path: '/farmer/profile', icon: User },
     ],
   },
   fpo: {

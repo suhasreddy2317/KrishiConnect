@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ROLE_CONFIGS, UserRole } from '@/config/navigation';
+import { ROLE_CONFIGS, UserRole, type NavItemConfig } from '@/config/navigation';
 import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export interface SidebarProps {
   currentRole: UserRole;
@@ -18,8 +19,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { t } = useLanguage();
   const roleConfig = ROLE_CONFIGS[currentRole];
   const palette = roleConfig.palette;
+  const isFarmer = currentRole === 'farmer';
+
+  const resolveLabel = (item: NavItemConfig): string => {
+    if (item.nameKey) return t(item.nameKey);
+    return item.name || '';
+  };
+
+  const resolveDescription = (item: NavItemConfig): string | undefined => {
+    if (item.descriptionKey) return t(item.descriptionKey);
+    return item.description;
+  };
 
   return (
     <aside
@@ -110,16 +123,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             backgroundColor: isActive ? palette.primary : undefined,
             borderColor: isActive ? palette.border : undefined,
           })}
-          title={isCollapsed ? 'Platform Hub' : undefined}
+          title={isCollapsed ? (isFarmer ? t('nav.platformHub') : 'Platform Hub') : undefined}
         >
           <Layers className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Overview Hub</span>}
+          {!isCollapsed && <span>{isFarmer ? t('nav.overviewHub') : 'Overview Hub'}</span>}
         </NavLink>
 
         <div className="pt-2 pb-1">
           {!isCollapsed && (
             <div className="px-3 text-[10px] font-mono uppercase tracking-wider text-text-muted font-semibold">
-              Role Workspaces
+              {isFarmer ? t('nav.roleWorkspaces') : 'Role Workspaces'}
             </div>
           )}
         </div>
@@ -127,6 +140,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {roleConfig.navItems.map((item) => {
           const Icon = item.icon;
           const isSelected = activeSubTab === item.path || (!activeSubTab && item.path === roleConfig.basePath);
+          const label = resolveLabel(item);
+          const description = resolveDescription(item);
 
           if (isSelected) {
             return (
@@ -135,10 +150,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex items-center space-x-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors select-none text-left border font-semibold cursor-pointer"
                 style={{ backgroundColor: palette.primary, color: '#FFFFFF', borderColor: palette.border }}
                 onClick={() => onSelectSubTab?.(item.path)}
-                title={isCollapsed ? item.name : undefined}
+                title={isCollapsed ? label : description || label}
               >
                 <Icon className="w-4 h-4 shrink-0" style={{ color: '#FFFFFF' }} />
-                {!isCollapsed && <span className="truncate">{item.name}</span>}
+                {!isCollapsed && <span className="truncate">{label}</span>}
               </div>
             );
           }
@@ -148,12 +163,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.path}
               type="button"
               onClick={() => onSelectSubTab?.(item.path)}
-              title={isCollapsed ? item.name : undefined}
+              title={isCollapsed ? label : description || label}
               className="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-colors select-none text-left text-text-muted hover:bg-surface-raised hover:text-text-main"
             >
               <div className="flex items-center space-x-3 truncate">
                 <Icon className="w-4 h-4 shrink-0 text-text-muted" />
-                {!isCollapsed && <span className="truncate">{item.name}</span>}
+                {!isCollapsed && <span className="truncate">{label}</span>}
               </div>
 
               {!isCollapsed && item.badge && (

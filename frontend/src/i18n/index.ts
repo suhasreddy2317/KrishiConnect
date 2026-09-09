@@ -16,7 +16,7 @@ const translations = { en, hi, kn, te };
 
 export type TranslationKeys = typeof en;
 
-export const t = (key: string, lang: Language): string => {
+export const t = (key: string, lang: Language, params?: Record<string, string | number>): string => {
   const keys = key.split('.');
   let value: unknown = translations[lang];
 
@@ -36,5 +36,14 @@ export const t = (key: string, lang: Language): string => {
     }
   }
 
-  return typeof value === 'string' ? value : key;
+  if (typeof value !== 'string') return key;
+
+  if (params) {
+    return value.replace(/\{(\w+)\}/g, (_, match) => {
+      if (match in params) return String(params[match]);
+      return `{${match}}`;
+    });
+  }
+
+  return value;
 };
