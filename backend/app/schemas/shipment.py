@@ -32,3 +32,10 @@ class ShipmentResponse(ShipmentBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ShipmentListResponse(BaseModel):
+    items: list[ShipmentResponse]
+    total: int
+
+    model_config = ConfigDict(from_attributes=True)

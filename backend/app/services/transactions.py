@@ -8,8 +8,10 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.models.demand import Demand
 from app.models.enums import TransactionStatus, UserRole
 from app.models.offer import Offer
+from app.models.produce_lot import ProduceLot
 from app.models.transaction import Transaction
 from app.models.shipment import Shipment
 from app.models.payment import Payment
@@ -33,6 +35,39 @@ VALID_TRANSITIONS = {
     TransactionStatus.disputed: {TransactionStatus.accepted},
     TransactionStatus.completed: set(),
     TransactionStatus.pending: {TransactionStatus.accepted, TransactionStatus.disputed},
+}
+
+
+TRANSACTION_TO_SHIPMENT_STATUS: dict[TransactionStatus, str] = {
+    TransactionStatus.confirmed: "pending",
+    TransactionStatus.dispatched: "dispatched",
+    TransactionStatus.in_transit: "in_transit",
+    TransactionStatus.delivered: "delivered",
+    TransactionStatus.payment_pending: "payment_pending",
+    TransactionStatus.completed: "completed",
+}
+
+SHIPMENT_TO_TRANSACTION_STATUS: dict[str, TransactionStatus] = {
+    "pending": TransactionStatus.confirmed,
+    "dispatched": TransactionStatus.dispatched,
+    "in_transit": TransactionStatus.in_transit,
+    "delivered": TransactionStatus.delivered,
+    "payment_pending": TransactionStatus.payment_pending,
+    "completed": TransactionStatus.completed,
+}
+
+
+def _transaction_status_to_shipment_status(transaction_status: TransactionStatus) -> str:
+    return TRANSACTION_TO_SHIPMENT_STATUS.get(transaction_status, "pending")
+
+
+_SHIPMENT_STATUS_ORDER: dict[str, int] = {
+    "pending": 0,
+    "dispatched": 1,
+    "in_transit": 2,
+    "delivered": 3,
+    "payment_pending": 4,
+    "completed": 5,
 }
 
 
@@ -72,8 +107,11 @@ def create_transaction(
         raise TransactionError("Quantity must be positive", status_code=400)
     if agreed_price <= 0:
         raise TransactionError("Agreed price must be positive", status_code=400)
-    if total_amount != quantity * agreed_price:
-        raise TransactionError("Total amount must equal quantity * agreed_price", status_code=400)
+    if total_amount != (quantity / 100) * agreed_price:
+        raise TransactionError(
+            "Total amount must equal (quantity_kg / 100) * agreed_price_per_qtl",
+            status_code=400,
+        )
 
     transaction = Transaction(
         offer_id=offer_id,
@@ -118,6 +156,32 @@ def update_transaction_status(
     transaction.status = next_status
     if next_status == TransactionStatus.confirmed:
         transaction.confirmed_at = datetime.utcnow()
+        existing_shipment = db.query(Shipment).filter(Shipment.transaction_id == transaction.id).first()
+        if existing_shipment is None:
+            lot = db.get(ProduceLot, transaction.lot_id)
+            offer = db.get(Offer, transaction.offer_id)
+            demand = db.get(Demand, offer.demand_id) if offer else None
+            pickup = lot.location if lot and lot.location else "Pickup location TBD"
+            delivery = demand.delivery_location if demand and demand.delivery_location else "Delivery location TBD"
+            shipment_status = _transaction_status_to_shipment_status(next_status)
+            shipment = Shipment(
+                transaction_id=transaction.id,
+                pickup_location=pickup,
+                delivery_location=delivery,
+                status=shipment_status,
+            )
+            db.add(shipment)
+            db.commit()
+            db.refresh(shipment)
+            record_audit(
+                db,
+                action="shipment.created",
+                entity_type="shipment",
+                entity_id=shipment.id,
+                actor_user_id=actor_user_id,
+                details=f"transaction_id={transaction.id}",
+            )
+            db.commit()
     if next_status == TransactionStatus.completed:
         transaction.completed_at = datetime.utcnow()
 
@@ -177,6 +241,7 @@ def create_shipment(
     if existing:
         raise TransactionError("Shipment already exists for this transaction", status_code=409)
 
+    shipment_status = _transaction_status_to_shipment_status(transaction.status)
     shipment = Shipment(
         transaction_id=transaction_id,
         pickup_location=pickup_location,
@@ -185,7 +250,7 @@ def create_shipment(
         vehicle_number=vehicle_number,
         estimated_pickup=estimated_pickup,
         estimated_delivery=estimated_delivery,
-        status="pending",
+        status=shipment_status,
     )
     db.add(shipment)
     db.commit()
@@ -225,6 +290,17 @@ def update_shipment_status(
 
     db.commit()
     db.refresh(shipment)
+
+    next_transaction_status = SHIPMENT_TO_TRANSACTION_STATUS.get(status)
+    if next_transaction_status is not None:
+        transaction = db.get(Transaction, shipment.transaction_id)
+        if transaction is not None and transaction.status != next_transaction_status:
+            update_transaction_status(
+                db,
+                transaction_id=transaction.id,
+                next_status=next_transaction_status,
+                actor_user_id=actor_user_id,
+            )
 
     record_audit(
         db,
@@ -354,4 +430,72 @@ def reconcile_missing_payments(db: Session, actor_user_id: Optional[int] = None)
             db.commit()
             created.append(payment)
     return created
+
+
+def reconcile_missing_shipments(db: Session, actor_user_id: Optional[int] = None) -> list[Shipment]:
+    transactions = (
+        db.query(Transaction)
+        .filter(
+            Transaction.status.in_(
+                [
+                    TransactionStatus.confirmed,
+                    TransactionStatus.dispatched,
+                    TransactionStatus.in_transit,
+                    TransactionStatus.delivered,
+                    TransactionStatus.payment_pending,
+                    TransactionStatus.completed,
+                ]
+            )
+        )
+        .all()
+    )
+    created = []
+    corrected = []
+    for transaction in transactions:
+        existing = db.query(Shipment).filter(Shipment.transaction_id == transaction.id).first()
+        shipment_status = _transaction_status_to_shipment_status(transaction.status)
+        if existing is None:
+            lot = db.get(ProduceLot, transaction.lot_id)
+            offer = db.get(Offer, transaction.offer_id)
+            demand = db.get(Demand, offer.demand_id) if offer else None
+            pickup = lot.location if lot and lot.location else "Pickup location TBD"
+            delivery = demand.delivery_location if demand and demand.delivery_location else "Delivery location TBD"
+            shipment = Shipment(
+                transaction_id=transaction.id,
+                pickup_location=pickup,
+                delivery_location=delivery,
+                status=shipment_status,
+            )
+            db.add(shipment)
+            db.commit()
+            db.refresh(shipment)
+            record_audit(
+                db,
+                action="shipment.created",
+                entity_type="shipment",
+                entity_id=shipment.id,
+                actor_user_id=actor_user_id,
+                details=f"transaction_id={transaction.id} status={shipment_status}",
+            )
+            db.commit()
+            created.append(shipment)
+        else:
+            current_order = _SHIPMENT_STATUS_ORDER.get(existing.status, 0)
+            mapped_order = _SHIPMENT_STATUS_ORDER.get(shipment_status, 0)
+            if mapped_order > current_order:
+                previous_status = existing.status
+                existing.status = shipment_status
+                db.commit()
+                db.refresh(existing)
+                record_audit(
+                    db,
+                    action="shipment.status.updated",
+                    entity_type="shipment",
+                    entity_id=existing.id,
+                    actor_user_id=actor_user_id,
+                    details=f"reconciled status {previous_status} -> {shipment_status}",
+                )
+                db.commit()
+                corrected.append(existing)
+    return created, corrected
 

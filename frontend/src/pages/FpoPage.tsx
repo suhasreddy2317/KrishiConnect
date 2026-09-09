@@ -15,7 +15,7 @@ import { Table } from '@/components/data-display/Table';
 import { LoadingState } from '@/components/data-display/LoadingState';
 import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
-import { Users, Layers, Building2, Coins, Plus, Activity, Info } from 'lucide-react';
+import { Users, Layers, Building2, Coins, Plus, Activity, BarChart3, ShieldCheck } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
@@ -345,7 +345,9 @@ export const FpoPage: React.FC = () => {
           message="Overview metrics, pooled lots, active demands, and payout ledger are now connected to live backend APIs. Member activity and compliance sections currently show demo data because dedicated FPO/member endpoints are not yet implemented."
         />
 
-        <DashboardGrid columns={4}>
+        {activeTab === '/fpo' && (
+          <>
+            <DashboardGrid columns={4}>
           <MetricCard
             label="Pooled Lots"
             value={String(totalLots)}
@@ -506,19 +508,170 @@ export const FpoPage: React.FC = () => {
             </Section>
           </div>
         </div>
-
+          </>
+        )}
+        
+        {activeTab === '/fpo/members' && (
+          <div className="space-y-6">
+            <Section title="Member Activity" description="Recent contributions across member farmers.">
+              <Card variant="default" padding="none">
+                <div className="p-3 rounded-lg bg-surface-raised border border-border/30 text-xs text-status-warning mb-3">
+                  Demo data — member activity API not yet implemented
+                </div>
+                <div className="divide-y divide-border/60">
+                  {memberActivity.map((activity, idx) => (
+                    <div key={idx} className="p-4 flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-lg bg-surface-raised border border-border/30 flex items-center justify-center text-status-success shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-text-main truncate">{activity.name}</div>
+                        <div className="text-xs text-text-muted">{activity.action} • {activity.crop}</div>
+                        <DataFreshness timestamp={activity.time} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/fpo/lots' && (
+          <div className="space-y-6">
+            <Section
+              title="Pooled Produce Inventory"
+              description="Grade-certified bulk lots pooled from member farmers, ready for institutional buyers."
+              action={
+                <Button variant="ghost" size="sm">View All Lots</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {lotsLoading ? (
+                  <LoadingState message="Loading pooled lots..." />
+                ) : lotsError ? (
+                  <ErrorState title="Unable to load lots" message={lotsError} onRetry={fetchLots} />
+                ) : lots.length === 0 ? (
+                  <EmptyState icon={<Layers className="w-6 h-6" />} title="No pooled lots yet" description="Lots will appear here once farmers publish produce." />
+                ) : (
+                  <Table
+                    columns={lotColumns}
+                    data={lots}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No pooled lots yet"
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/fpo/demand' && (
+          <div className="space-y-6">
+            <Section
+              title="Buyer Demand"
+              description="Active procurement requirements from institutional buyers matching your pooled inventory."
+              action={
+                <Button variant="ghost" size="sm">Browse All RFQs</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {demandsLoading ? (
+                  <LoadingState message="Loading active demands..." />
+                ) : demandsError ? (
+                  <ErrorState title="Unable to load demands" message={demandsError} onRetry={fetchDemands} />
+                ) : demands.length === 0 ? (
+                  <EmptyState icon={<Building2 className="w-6 h-6" />} title="No active demands" description="Active procurement demands will appear here." />
+                ) : (
+                  <Table
+                    columns={demandColumns}
+                    data={demands}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No active demands"
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/fpo/offers' && (
+          <div className="space-y-6">
+            <Section
+              title="Offers & Matching"
+              description="Buyer offers against your pooled lots. Review pricing, quantities, and negotiate terms."
+              action={
+                <Button variant="ghost" size="sm">View All Offers</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {offersLoading ? (
+                  <LoadingState message="Loading offers..." />
+                ) : offersError ? (
+                  <ErrorState title="Unable to load offers" message={offersError} onRetry={fetchOffers} />
+                ) : offers.length === 0 ? (
+                  <EmptyState icon={<Coins className="w-6 h-6" />} title="No offers yet" description="Offers will appear here when buyers respond to your lots." />
+                ) : (
+                  <Table
+                    columns={offerColumns}
+                    data={offers}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No offers yet"
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/fpo/transactions' && (
+          <div className="space-y-6">
+            <Section title="Payout Ledger" description="Pro-rata distribution from accepted offers.">
+              <Card variant="default" padding="none">
+                {paymentsLoading ? (
+                  <LoadingState message="Loading payout ledger..." />
+                ) : paymentsError ? (
+                  <ErrorState title="Unable to load payments" message={paymentsError} onRetry={fetchPayments} />
+                ) : payments.length === 0 ? (
+                  <EmptyState icon={<Coins className="w-6 h-6" />} title="No payments yet" description="Payouts will appear here once payments are recorded." />
+                ) : (
+                  <>
+                    <div className="p-3 text-xs text-text-muted bg-surface-raised/50 border-b border-border/30">
+                      Pro-rata distribution calculated from individual lot grade contributions.
+                    </div>
+                    <Table
+                      columns={paymentColumns}
+                      data={payments.slice(0, 5)}
+                      keyExtractor={(item) => String(item.id)}
+                      emptyMessage="No payments recorded"
+                    />
+                  </>
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/fpo/analytics' && (
+          <div className="space-y-6">
+            <Card variant="default" padding="md">
+              <EmptyState icon={<BarChart3 className="w-6 h-6" />} title="Analytics coming soon" description="Detailed analytics will be available in a future update." />
+            </Card>
+          </div>
+        )}
+        
         <Card variant="default" padding="md">
           <div className="flex items-start space-x-4">
-            <Info className="w-5 h-5 text-status-success mt-0.5 shrink-0" />
-            <div className="space-y-1 text-sm">
-              <h3 className="font-semibold text-text-main">FPO Collective Bargaining Rules (RULES.md Section 6 & 7)</h3>
-              <p className="text-text-muted leading-relaxed">
-                Each contributing member lot maintains a cryptographic and database reference in the pooled master lot. When a bulk offer is accepted, the FPO manager signs on behalf of the collective, and payment milestones trigger automated individual distribution allocations.
-              </p>
+            <ShieldCheck className="w-5 h-5 text-status-success mt-0.5 shrink-0" />
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-text-main">FPO Collective Bargaining Rules</div>
+              <div className="text-xs text-text-muted leading-relaxed">
+                Bulk pricing, quality standards, and delivery terms follow FPO bye-laws (RULES.md Section 6 & 7). These terms are automatically appended to all pooled-lot RFQs and member payout calculations.
+              </div>
             </div>
           </div>
         </Card>
-      </MobileStack>
+       </MobileStack>
     </AppShell>
   );
 };

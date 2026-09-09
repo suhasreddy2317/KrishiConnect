@@ -828,8 +828,8 @@ export const BuyerPage: React.FC = () => {
     setShipmentsLoading(true);
     setShipmentsError(null);
     try {
-      const data = await apiRequest<BackendShipment[]>('/shipments/', { method: 'GET' }, token);
-      setShipments(data);
+      const data = await apiRequest<{ items: BackendShipment[]; total: number }>('/shipments/', { method: 'GET' }, token);
+      setShipments(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       setShipmentsError(err instanceof Error ? err.message : 'Failed to load shipments');
       setShipments([]);
@@ -1538,7 +1538,9 @@ export const BuyerPage: React.FC = () => {
           message="Buyer demand posting, lot matching, offer negotiation, and transaction business logic will be implemented in later phases. This dashboard shows the intended shell and static data model."
         />
 
-        <DashboardGrid columns={4}>
+        {activeTab === '/buyer' && (
+          <>
+            <DashboardGrid columns={4}>
           <MetricCard
             label="Active Demands"
             value={String(demands.length || 7)}
@@ -1690,6 +1692,162 @@ export const BuyerPage: React.FC = () => {
 
                   return (
                      <Card key={match.lot_id} variant="raised" padding="md" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="lime" size="sm">{cropName}</Badge>
+                        <span className="text-xs font-mono text-text-muted">Lot #{match.lot_id}</span>
+                      </div>
+                      {matchedLotsFreshness && <DataFreshness timestamp={formatRelativeTime(matchedLotsFreshness)} />}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Grade</span>
+                        <StatusBadge status={gradeStatus} label={gradeLabel} size="sm" />
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Lot Grade</span>
+                        <span className="text-text-main font-mono">{match.lot_grade}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Quantity</span>
+                        <span className="text-text-main font-mono">{match.lot_quantity.toLocaleString()} kg</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Location</span>
+                        <span className="text-text-main">{match.lot_location || '—'}</span>
+                      </div>
+                    </div>
+
+                   <div className="space-y-3 pt-1">
+                      <ScoreBar value={match.match_score} label="Match Score" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <ScoreBar value={match.quantity_fit} label="Qty Fit" />
+                        <ScoreBar value={match.location_fit} label="Location Fit" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <ScoreBar value={match.urgency} label="Urgency" />
+                        <ScoreBar value={match.buyer_confidence} label="Buyer Confidence" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                      <div className="text-[10px] font-mono text-text-muted">
+                        Match Score: <span className="text-text-main">{Math.round(match.match_score)}%</span>
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleOpenOfferDialog(match)}
+                        leftIcon={<Send className="w-3.5 h-3.5" />}
+                      >
+                        Make Offer
+                      </Button>
+                    </div>
+
+                    {match.reasons.length > 0 && (
+                       <div className="text-[10px] text-text-muted space-y-1.5 pt-2 border-t border-border/60">
+                          <p className="font-medium text-text-main">Matching Reasons</p>
+                          {match.reasons.map((reason, idx) => (
+                            <p key={idx} className="leading-relaxed">• {reason}</p>
+                          ))}
+                       </div>
+                     )}
+
+                     {match.limitations.length > 0 && (
+                       <div className="text-[10px] text-status-warning space-y-1.5">
+                        {match.limitations.map((limitation, idx) => (
+                          <p key={idx} className="leading-relaxed">⚠ {limitation}</p>
+                        ))}
+                       </div>
+                     )}
+                   </Card>
+                 );
+               })}
+             </div>
+           )}
+         </Section>
+       </div>
+          </>
+        )}
+        
+        {activeTab === '/buyer/demand' && (
+          <div className="space-y-6">
+            <Section
+              title="Active Procurement Demands"
+              description="Open RFQs requiring verified-quality produce within defined timelines."
+              action={
+                <Button variant="ghost" size="sm" onClick={handleOpenDemandDialog} leftIcon={<Send className="w-3.5 h-3.5" />}>
+                  Post New RFQ
+                </Button>
+              }
+            >
+              {demandsLoading && <LoadingState message="Loading demands..." />}
+              {demandsError && <ErrorState title="Unable to load demands" message={demandsError} onRetry={retryDemands} />}
+              {!demandsLoading && !demandsError && demands.length === 0 && (
+                <EmptyState
+                  title="No active demands"
+                  description="Post your first RFQ to start sourcing verified-quality produce."
+                  actionLabel="Post Demand RFQ"
+                  onAction={handleOpenDemandDialog}
+                />
+              )}
+              {!demandsLoading && !demandsError && demands.length > 0 && (
+                <Card variant="default" padding="none">
+                  <Table
+                    columns={demandColumns}
+                    data={demands}
+                    keyExtractor={(item) => item.id}
+                    emptyMessage="No active demands"
+                    onRowClick={handleDemandClick}
+                  />
+                </Card>
+              )}
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/buyer/lots' && (
+          <div className="space-y-6">
+            <Section
+              title="Available Lots"
+              description="Verified farmer and FPO lots available for immediate procurement."
+              action={
+                <Button variant="ghost" size="sm">Filter Lots</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                <Table
+                  columns={lotColumns}
+                  data={availableLots}
+                  keyExtractor={(item) => item.id}
+                  emptyMessage="No lots available"
+                />
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/buyer/matches' && (
+          <div className="space-y-6">
+            <Section title="Matched Lots" description={selectedDemandLabel ? `Lots matching your ${selectedDemandLabel} demand` : 'Select a demand in the table above to view matched lots.'}>
+              {matchedLotsLoading && <LoadingState message="Finding matched lots..." />}
+              {matchedLotsError && <ErrorState title="Unable to load matches" message={matchedLotsError} onRetry={retryMatchedLots} />}
+              {!matchedLotsLoading && !matchedLotsError && selectedDemandId && matchedLotsData.length === 0 && (
+                <EmptyState title="No matching lots" description="No published lots currently match this demand's requirements." />
+              )}
+              {!matchedLotsLoading && !matchedLotsError && !selectedDemandId && (
+                <EmptyState title="Select a demand" description="Click on any demand in the Active Procurement Demands table to see matched lots." />
+              )}
+              {!matchedLotsLoading && !matchedLotsError && matchedLotsData.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {matchedLotsData.map((match) => {
+                    const cropName = getCommodityName(match.commodity_id);
+                    const gradeStatus = match.grade_compatibility === 'exact' ? 'trusted' : match.grade_compatibility === 'compatible' ? 'warning' : 'completed';
+                    const gradeLabel = match.grade_compatibility === 'exact' ? 'Exact Match' : match.grade_compatibility === 'compatible' ? 'Compatible' : 'Incompatible';
+
+                    return (
+                       <Card key={match.lot_id} variant="raised" padding="md" className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge variant="lime" size="sm">{cropName}</Badge>
@@ -1717,17 +1875,17 @@ export const BuyerPage: React.FC = () => {
                         </div>
                       </div>
 
-                       <div className="space-y-3 pt-1">
-                         <ScoreBar value={match.match_score} label="Match Score" />
-                         <div className="grid grid-cols-2 gap-3">
-                           <ScoreBar value={match.quantity_fit} label="Qty Fit" />
-                           <ScoreBar value={match.location_fit} label="Location Fit" />
-                         </div>
-                         <div className="grid grid-cols-2 gap-3">
-                           <ScoreBar value={match.urgency} label="Urgency" />
-                           <ScoreBar value={match.buyer_confidence} label="Buyer Confidence" />
-                         </div>
-                       </div>
+                     <div className="space-y-3 pt-1">
+                        <ScoreBar value={match.match_score} label="Match Score" />
+                        <div className="grid grid-cols-2 gap-3">
+                          <ScoreBar value={match.quantity_fit} label="Qty Fit" />
+                          <ScoreBar value={match.location_fit} label="Location Fit" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <ScoreBar value={match.urgency} label="Urgency" />
+                          <ScoreBar value={match.buyer_confidence} label="Buyer Confidence" />
+                        </div>
+                      </div>
 
                       <div className="flex items-center justify-between pt-3 border-t border-border/60">
                         <div className="text-[10px] font-mono text-text-muted">
@@ -1745,10 +1903,10 @@ export const BuyerPage: React.FC = () => {
 
                       {match.reasons.length > 0 && (
                          <div className="text-[10px] text-text-muted space-y-1.5 pt-2 border-t border-border/60">
-                           <p className="font-medium text-text-main">Matching Reasons</p>
-                           {match.reasons.map((reason, idx) => (
-                             <p key={idx} className="leading-relaxed">• {reason}</p>
-                           ))}
+                            <p className="font-medium text-text-main">Matching Reasons</p>
+                            {match.reasons.map((reason, idx) => (
+                              <p key={idx} className="leading-relaxed">• {reason}</p>
+                            ))}
                          </div>
                        )}
 
@@ -1757,32 +1915,19 @@ export const BuyerPage: React.FC = () => {
                           {match.limitations.map((limitation, idx) => (
                             <p key={idx} className="leading-relaxed">⚠ {limitation}</p>
                           ))}
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                         </div>
+                       )}
+                     </Card>
+                   );
+                 })}
+               </div>
+             )}
           </Section>
-
-          <Section
-            title="Available Lots"
-            description="Verified farmer and FPO lots available for immediate procurement."
-            action={
-              <Button variant="ghost" size="sm">Filter Lots</Button>
-            }
-          >
-            <Card variant="default" padding="none">
-              <Table
-                columns={lotColumns}
-                data={availableLots}
-                keyExtractor={(item) => item.id}
-                emptyMessage="No lots available"
-              />
-            </Card>
-          </Section>
-
+        </div>
+      )}
+      
+      {activeTab === '/buyer/offers' && (
+        <div className="space-y-6">
           <Section
             title="Active Offers"
             description="Structured offers with locking expiry and negotiation history."
@@ -1806,7 +1951,11 @@ export const BuyerPage: React.FC = () => {
                  </Card>
                )}
           </Section>
-
+        </div>
+      )}
+      
+      {activeTab === '/buyer/transactions' && (
+        <div className="space-y-6">
           <Section
             title="Transactions"
             description="Accepted offers converted to tracked transactions with settlement status."
@@ -1866,6 +2015,34 @@ export const BuyerPage: React.FC = () => {
           </Section>
 
           <Section
+            title="Payments"
+            description="Buyer-authorized payments for completed transactions."
+            action={
+              <Button variant="ghost" size="sm" onClick={retryPayments}>Refresh</Button>
+            }
+          >
+               {paymentsLoading && <LoadingState message="Loading payments..." />}
+               {paymentsError && <ErrorState title="Unable to load payments" message={paymentsError} onRetry={retryPayments} />}
+               {!paymentsLoading && !paymentsError && payments.length === 0 && (
+                 <EmptyState icon={<Wallet className="w-6 h-6" />} title="No payments" description="Payments will appear here after delivery confirmation and payment initiation." />
+               )}
+               {!paymentsLoading && !paymentsError && payments.length > 0 && (
+                 <Card variant="default" padding="none">
+                   <Table
+                     columns={paymentColumns}
+                     data={payments}
+                     keyExtractor={(item) => String(item.id)}
+                     emptyMessage="No payments"
+                   />
+                 </Card>
+               )}
+          </Section>
+        </div>
+      )}
+      
+      {activeTab === '/buyer/logistics' && (
+        <div className="space-y-6">
+          <Section
             title="Shipments"
             description="Logistics tracking for confirmed transactions."
             action={
@@ -1888,62 +2065,43 @@ export const BuyerPage: React.FC = () => {
                  </Card>
                  )}
              </Section>
-
-               <Section
-                 title="Payments"
-                 description="Buyer-authorized payments for completed transactions."
-                 action={
-                   <Button variant="ghost" size="sm" onClick={retryPayments}>Refresh</Button>
-                 }
-               >
-                  {paymentsLoading && <LoadingState message="Loading payments..." />}
-                  {paymentsError && <ErrorState title="Unable to load payments" message={paymentsError} onRetry={retryPayments} />}
-                  {!paymentsLoading && !paymentsError && payments.length === 0 && (
-                    <EmptyState icon={<Wallet className="w-6 h-6" />} title="No payments" description="Payments will appear here after delivery confirmation and payment initiation." />
-                  )}
-                  {!paymentsLoading && !paymentsError && payments.length > 0 && (
-                    <Card variant="default" padding="none">
-                      <Table
-                        columns={paymentColumns}
-                        data={payments}
-                        keyExtractor={(item) => String(item.id)}
-                        emptyMessage="No payments"
-                      />
-                    </Card>
-                  )}
-               </Section>
-
-               <Section
-                 title="Disputes"
-                 description="Track and manage disputes for your transactions."
-                 action={
-                   <div className="flex items-center gap-2">
-                     <Button variant="ghost" size="sm" onClick={retryDisputes}>Refresh</Button>
-                     <Button variant="outline" size="sm" leftIcon={<Scale className="w-3.5 h-3.5" />} onClick={() => handleOpenCreateDispute()}>
-                       New Dispute
-                     </Button>
-                   </div>
-                 }
-               >
-                 {disputesLoading && <LoadingState message="Loading disputes..." />}
-                 {disputesError && <ErrorState title="Unable to load disputes" message={disputesError} onRetry={retryDisputes} />}
-                 {!disputesLoading && !disputesError && disputes.length === 0 && (
-                   <EmptyState icon={<Scale className="w-6 h-6" />} title="No disputes" description="Disputes can be opened if delivery or quality does not match agreed terms." />
-                 )}
-                 {!disputesLoading && !disputesError && disputes.length > 0 && (
-                   <Card variant="default" padding="none">
-                     <Table
-                       columns={disputeColumns}
-                       data={disputes}
-                       keyExtractor={(item) => String(item.id)}
-                       emptyMessage="No disputes"
-                       onRowClick={(dispute) => handleOpenDisputeDetail(dispute as BackendDispute)}
-                     />
-                   </Card>
-                 )}
-               </Section>
         </div>
-      </MobileStack>
+      )}
+      
+      {activeTab === '/buyer/disputes' && (
+        <div className="space-y-6">
+          <Section
+            title="Disputes"
+            description="Track and manage disputes for your transactions."
+            action={
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={retryDisputes}>Refresh</Button>
+                <Button variant="outline" size="sm" leftIcon={<Scale className="w-3.5 h-3.5" />} onClick={() => handleOpenCreateDispute()}>
+                  New Dispute
+                </Button>
+              </div>
+            }
+          >
+            {disputesLoading && <LoadingState message="Loading disputes..." />}
+            {disputesError && <ErrorState title="Unable to load disputes" message={disputesError} onRetry={retryDisputes} />}
+            {!disputesLoading && !disputesError && disputes.length === 0 && (
+              <EmptyState icon={<Scale className="w-6 h-6" />} title="No disputes" description="Disputes can be opened if delivery or quality does not match agreed terms." />
+            )}
+            {!disputesLoading && !disputesError && disputes.length > 0 && (
+              <Card variant="default" padding="none">
+                <Table
+                  columns={disputeColumns}
+                  data={disputes}
+                  keyExtractor={(item) => String(item.id)}
+                  emptyMessage="No disputes"
+                  onRowClick={(dispute) => handleOpenDisputeDetail(dispute as BackendDispute)}
+                />
+              </Card>
+            )}
+          </Section>
+        </div>
+      )}
+       </MobileStack>
 
       <Dialog isOpen={isDemandDialogOpen} onClose={handleCloseDemandDialog} title="Post Demand / RFQ" description="Create a new procurement demand to source verified-quality produce." maxWidth="lg" footer={
         <div className="flex items-center justify-end gap-3">

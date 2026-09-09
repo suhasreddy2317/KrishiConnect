@@ -130,7 +130,7 @@ def test_transaction_created_from_accepted_offer(data):
     assert txn["status"] == "accepted"
     assert txn["quantity"] == 6000
     assert txn["agreed_price"] == 45.0
-    assert txn["total_amount"] == 270000.0
+    assert txn["total_amount"] == 2700.0
 
 
 def test_transaction_rejected_from_non_accepted_offer(data):
@@ -149,7 +149,7 @@ def test_transaction_rejected_from_non_accepted_offer(data):
             "farmer_id": data.farmer1.id,
             "quantity": 4000,
             "agreed_price": 28.0,
-            "total_amount": 112000.0,
+            "total_amount": 1120.0,
         },
         headers={"Authorization": f"Bearer {token_b}"},
     )
@@ -166,7 +166,7 @@ def test_duplicate_transaction_prevention(data):
         "farmer_id": data.farmer2.id,
         "quantity": 6000,
         "agreed_price": 45.0,
-        "total_amount": 270000.0,
+            "total_amount": 2700.0,
     }
     response = client.post("/api/transactions/", json=payload, headers={"Authorization": f"Bearer {token_b}"})
     assert response.status_code == 409
@@ -249,16 +249,17 @@ def test_shipment_status_update(data):
     offer_id, txn = _create_accepted_offer(data)
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
-    shipment = client.post(
-        "/api/shipments/",
-        json={
-            "transaction_id": txn_id,
-            "pickup_location": "Solapur Farm Gate",
-            "delivery_location": "Pune Processing Unit",
-        },
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
         headers={"Authorization": f"Bearer {token_b}"},
-    ).json()
-    shipment_id = shipment["id"]
+    )
+
+    shipments_resp = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"})
+    assert shipments_resp.status_code == 200
+    shipment_id = shipments_resp.json()["items"][0]["id"]
+
     response = client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "dispatched"},
@@ -266,6 +267,10 @@ def test_shipment_status_update(data):
     )
     assert response.status_code == 200
     assert response.json()["status"] == "dispatched"
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"})
+    assert txn_after.status_code == 200
+    assert txn_after.json()["status"] == "dispatched"
 
 
 def test_payment_creation(data):
@@ -276,7 +281,7 @@ def test_payment_creation(data):
         "/api/payments/",
         json={
             "transaction_id": txn_id,
-            "amount": 270000.0,
+            "amount": 2700.0,
             "payment_method": "bank_transfer",
             "reference": "TXN-2026-001234",
         },
@@ -284,7 +289,7 @@ def test_payment_creation(data):
     )
     assert response.status_code == 201
     body = response.json()
-    assert body["amount"] == 270000.0
+    assert body["amount"] == 2700.0
     assert body["status"] == "pending"
 
 
@@ -296,7 +301,7 @@ def test_payment_status_update(data):
         "/api/payments/",
         json={
             "transaction_id": txn_id,
-            "amount": 270000.0,
+            "amount": 2700.0,
         },
         headers={"Authorization": f"Bearer {token_b}"},
     ).json()
@@ -312,7 +317,7 @@ def test_payment_status_update(data):
 
 def test_transaction_total_calculation(data):
     offer_id, txn = _create_accepted_offer(data)
-    assert txn["total_amount"] == 6000 * 45.0
+    assert txn["total_amount"] == (6000 / 100) * 45.0
 
 
 def test_invalid_total_amount(data):
@@ -372,7 +377,7 @@ def test_deterministic_transaction(data):
     assert txn_a["total_amount"] == txn_b["total_amount"]
 
 
-def _create_accepted_txn_and_payment(data, buyer_profile, farmer_profile, buyer_phone, farmer_phone, demand, lot, qty=6000, price=45.0, amount=270000.0):
+def _create_accepted_txn_and_payment(data, buyer_profile, farmer_profile, buyer_phone, farmer_phone, demand, lot, qty=6000, price=45.0, amount=2700.0):
     token_b = _login(buyer_phone)
     offer = client.post(
         "/api/offers/",
@@ -598,7 +603,7 @@ def test_reconcile_missing_payment_for_seeded_completed_transaction(data):
             farmer_id=data.farmer1.id,
             quantity=4000,
             agreed_price=26.0,
-            total_amount=104000.0,
+            total_amount=1040.0,
             status=TransactionStatus.completed,
         )
         db_session.add(completed_txn)
@@ -610,7 +615,7 @@ def test_reconcile_missing_payment_for_seeded_completed_transaction(data):
         from app.models.payment import Payment
         payment = db_session.query(Payment).filter(Payment.transaction_id == completed_txn.id).first()
         assert payment is not None
-        assert payment.amount == 104000.0
+        assert payment.amount == 1040.0
         assert payment.status == "pending"
     finally:
         db_session.close()
@@ -621,3 +626,773 @@ def test_reconcile_missing_payment_for_seeded_completed_transaction(data):
     body = response.json()
     assert body["total"] >= 1
     assert any(p["transaction_id"] == completed_txn.id for p in body["items"])
+
+
+def test_confirmed_creates_shipment_exactly_once(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    response = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["transaction_id"] == txn_id
+    assert body["items"][0]["status"] == "pending"
+    assert body["items"][0]["pickup_location"] == "Solapur"
+    assert body["items"][0]["delivery_location"] == "Solapur"
+
+
+def test_confirmed_does_not_duplicate_shipment(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 409
+
+    response = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"})
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+
+def test_farmer_sees_auto_created_shipment_after_confirmation(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    token_b = _login(BUYER1_USER_PHONE)
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    response = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_f2}"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["transaction_id"] == txn_id
+
+
+def test_reconcile_missing_shipment_for_existing_confirmed_transaction(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import reconcile_missing_shipments
+    from app.services.offers import create_offer
+
+    db_session = _Session()
+    try:
+        offer = create_offer(
+            db_session,
+            demand_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            quantity=6000,
+            offered_price=45.0,
+            pickup_window="2026-09-10 to 2026-09-12",
+            payment_terms="Net 5 days",
+            message="Test offer for reconciliation.",
+            buyer_user_id=data.b1u.id,
+        )
+        confirmed_txn = Transaction(
+            offer_id=offer.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.confirmed,
+        )
+        db_session.add(confirmed_txn)
+        db_session.commit()
+        db_session.refresh(confirmed_txn)
+
+        reconcile_missing_shipments(db_session)
+
+        from app.models.shipment import Shipment
+        shipment = db_session.query(Shipment).filter(Shipment.transaction_id == confirmed_txn.id).first()
+        assert shipment is not None
+        assert shipment.status == "pending"
+        assert shipment.pickup_location == "Solapur"
+        assert shipment.delivery_location == "Solapur"
+    finally:
+        db_session.close()
+
+
+def test_reconcile_does_not_duplicate_existing_shipment(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        confirmed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.confirmed,
+        )
+        db_session.add(confirmed_txn)
+        db_session.flush()
+
+        from app.models.shipment import Shipment
+        existing_shipment = Shipment(
+            transaction_id=confirmed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+            status="pending",
+        )
+        db_session.add(existing_shipment)
+        db_session.commit()
+
+        reconcile_missing_shipments(db_session)
+
+        shipments = db_session.query(Shipment).filter(Shipment.transaction_id == confirmed_txn.id).all()
+        assert len(shipments) == 1
+    finally:
+        db_session.close()
+
+
+def test_reconcile_completed_transaction_creates_completed_shipment(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        completed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.completed,
+        )
+        db_session.add(completed_txn)
+        db_session.commit()
+        db_session.refresh(completed_txn)
+
+        reconcile_missing_shipments(db_session)
+
+        from app.models.shipment import Shipment
+        shipment = db_session.query(Shipment).filter(Shipment.transaction_id == completed_txn.id).first()
+        assert shipment is not None
+        assert shipment.status == "completed"
+    finally:
+        db_session.close()
+
+
+def test_create_shipment_for_completed_transaction_creates_completed(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import create_shipment
+
+    db_session = _Session()
+    try:
+        completed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.completed,
+        )
+        db_session.add(completed_txn)
+        db_session.commit()
+        db_session.refresh(completed_txn)
+
+        shipment = create_shipment(
+            db_session,
+            transaction_id=completed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+        )
+        assert shipment.status == "completed"
+    finally:
+        db_session.close()
+
+
+def test_create_shipment_for_dispatched_transaction_creates_dispatched(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import create_shipment
+
+    db_session = _Session()
+    try:
+        dispatched_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.dispatched,
+        )
+        db_session.add(dispatched_txn)
+        db_session.commit()
+        db_session.refresh(dispatched_txn)
+
+        shipment = create_shipment(
+            db_session,
+            transaction_id=dispatched_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+        )
+        assert shipment.status == "dispatched"
+    finally:
+        db_session.close()
+
+
+def test_create_shipment_for_in_transit_transaction_creates_in_transit(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import create_shipment
+
+    db_session = _Session()
+    try:
+        in_transit_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.in_transit,
+        )
+        db_session.add(in_transit_txn)
+        db_session.commit()
+        db_session.refresh(in_transit_txn)
+
+        shipment = create_shipment(
+            db_session,
+            transaction_id=in_transit_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+        )
+        assert shipment.status == "in_transit"
+    finally:
+        db_session.close()
+
+
+def test_create_shipment_for_delivered_transaction_creates_delivered(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import create_shipment
+
+    db_session = _Session()
+    try:
+        delivered_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.delivered,
+        )
+        db_session.add(delivered_txn)
+        db_session.commit()
+        db_session.refresh(delivered_txn)
+
+        shipment = create_shipment(
+            db_session,
+            transaction_id=delivered_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+        )
+        assert shipment.status == "delivered"
+    finally:
+        db_session.close()
+
+
+def test_create_shipment_for_payment_pending_transaction_creates_payment_pending(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import create_shipment
+
+    db_session = _Session()
+    try:
+        pp_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.payment_pending,
+        )
+        db_session.add(pp_txn)
+        db_session.commit()
+        db_session.refresh(pp_txn)
+
+        shipment = create_shipment(
+            db_session,
+            transaction_id=pp_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+        )
+        assert shipment.status == "payment_pending"
+    finally:
+        db_session.close()
+
+
+def test_reconcile_corrects_existing_pending_shipment_for_completed_transaction(data):
+    from app.models.transaction import Transaction
+    from app.models.shipment import Shipment
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        completed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.completed,
+        )
+        db_session.add(completed_txn)
+        db_session.commit()
+        db_session.refresh(completed_txn)
+
+        existing_shipment = Shipment(
+            transaction_id=completed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+            status="pending",
+        )
+        db_session.add(existing_shipment)
+        db_session.commit()
+
+        created, corrected = reconcile_missing_shipments(db_session)
+        assert len(created) == 0
+        assert len(corrected) == 1
+        assert corrected[0].id == existing_shipment.id
+        assert corrected[0].status == "completed"
+    finally:
+        db_session.close()
+
+
+def test_reconcile_does_not_duplicate_existing_shipment(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        confirmed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.confirmed,
+        )
+        db_session.add(confirmed_txn)
+        db_session.flush()
+
+        from app.models.shipment import Shipment
+        existing_shipment = Shipment(
+            transaction_id=confirmed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+            status="pending",
+        )
+        db_session.add(existing_shipment)
+        db_session.commit()
+
+        created, corrected = reconcile_missing_shipments(db_session)
+
+        shipments = db_session.query(Shipment).filter(Shipment.transaction_id == confirmed_txn.id).all()
+        assert len(shipments) == 1
+        assert len(created) == 0
+        assert len(corrected) == 0
+    finally:
+        db_session.close()
+
+
+def test_reconcile_is_idempotent(data):
+    from app.models.transaction import Transaction
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        completed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.completed,
+        )
+        db_session.add(completed_txn)
+        db_session.commit()
+        db_session.refresh(completed_txn)
+
+        reconcile_missing_shipments(db_session)
+        reconcile_missing_shipments(db_session)
+        reconcile_missing_shipments(db_session)
+
+        from app.models.shipment import Shipment
+        shipments = db_session.query(Shipment).filter(Shipment.transaction_id == completed_txn.id).all()
+        assert len(shipments) == 1
+        assert shipments[0].status == "completed"
+    finally:
+        db_session.close()
+
+
+def test_reconcile_correction_is_idempotent(data):
+    from app.models.transaction import Transaction
+    from app.models.shipment import Shipment
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        completed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.completed,
+        )
+        db_session.add(completed_txn)
+        db_session.commit()
+        db_session.refresh(completed_txn)
+
+        existing_shipment = Shipment(
+            transaction_id=completed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+            status="pending",
+        )
+        db_session.add(existing_shipment)
+        db_session.commit()
+
+        created1, corrected1 = reconcile_missing_shipments(db_session)
+        created2, corrected2 = reconcile_missing_shipments(db_session)
+        created3, corrected3 = reconcile_missing_shipments(db_session)
+
+        assert len(created1) == 0 and len(created2) == 0 and len(created3) == 0
+        assert len(corrected1) == 1
+        assert len(corrected2) == 0
+        assert len(corrected3) == 0
+
+        shipments = db_session.query(Shipment).filter(Shipment.transaction_id == completed_txn.id).all()
+        assert len(shipments) == 1
+        assert shipments[0].status == "completed"
+    finally:
+        db_session.close()
+
+
+def test_reconcile_does_not_regress_independently_progressed_shipment(data):
+    from app.models.transaction import Transaction
+    from app.models.shipment import Shipment
+    from app.services.transactions import reconcile_missing_shipments
+
+    db_session = _Session()
+    try:
+        confirmed_txn = Transaction(
+            offer_id=data.demand_soy.id,
+            lot_id=data.lot_soy.id,
+            buyer_id=data.buyer1.id,
+            farmer_id=data.farmer2.id,
+            quantity=6000,
+            agreed_price=45.0,
+            total_amount=2700.0,
+            status=TransactionStatus.confirmed,
+        )
+        db_session.add(confirmed_txn)
+        db_session.commit()
+        db_session.refresh(confirmed_txn)
+
+        existing_shipment = Shipment(
+            transaction_id=confirmed_txn.id,
+            pickup_location="Solapur Farm Gate",
+            delivery_location="Pune Processing Unit",
+            status="dispatched",
+        )
+        db_session.add(existing_shipment)
+        db_session.commit()
+
+        created, corrected = reconcile_missing_shipments(db_session)
+        assert len(created) == 0
+        assert len(corrected) == 0
+
+        db_session.refresh(existing_shipment)
+        assert existing_shipment.status == "dispatched"
+    finally:
+        db_session.close()
+
+
+def test_total_amount_100kg_at_210_per_qtl(data):
+    token_b = _login(BUYER1_USER_PHONE)
+    offer_id = client.post(
+        "/api/offers/",
+        json=_offer_payload(data.demand_onion.id, data.lot_onion.id, qty=100, price=210.0),
+        headers={"Authorization": f"Bearer {token_b}"},
+    ).json()["id"]
+    token_f = _login(FARMER1_USER_PHONE)
+    client.post(f"/api/offers/{offer_id}/accept", headers={"Authorization": f"Bearer {token_f}"})
+    token_b = _login(BUYER1_USER_PHONE)
+    txn = client.get("/api/transactions/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]
+    assert txn["quantity"] == 100
+    assert txn["agreed_price"] == 210.0
+    assert txn["total_amount"] == (100 / 100) * 210.0
+
+
+def test_total_amount_200kg_at_420_per_qtl(data):
+    token_b = _login(BUYER1_USER_PHONE)
+    offer_id = client.post(
+        "/api/offers/",
+        json=_offer_payload(data.demand_soy.id, data.lot_soy.id, qty=200, price=420.0),
+        headers={"Authorization": f"Bearer {token_b}"},
+    ).json()["id"]
+    token_f = _login(FARMER2_USER_PHONE)
+    client.post(f"/api/offers/{offer_id}/accept", headers={"Authorization": f"Bearer {token_f}"})
+    token_b = _login(BUYER1_USER_PHONE)
+    txn = client.get("/api/transactions/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]
+    assert txn["quantity"] == 200
+    assert txn["agreed_price"] == 420.0
+    assert txn["total_amount"] == (200 / 100) * 420.0
+
+
+def test_shipment_dispatched_advances_transaction_to_dispatched(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_after["status"] == "dispatched"
+
+
+def test_shipment_in_transit_advances_transaction(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_after["status"] == "in_transit"
+
+
+def test_shipment_delivered_advances_transaction_and_creates_payment(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched", "in_transit"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_after["status"] == "delivered"
+
+    payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert payments_resp["total"] == 1
+    assert payments_resp["items"][0]["transaction_id"] == txn_id
+
+
+def test_shipment_payment_pending_advances_transaction(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_after["status"] == "payment_pending"
+
+
+def test_shipment_completed_advances_transaction_to_completed(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched", "in_transit", "delivered", "payment_pending"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "completed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_after["status"] == "completed"
+
+
+def test_completing_shipment_does_not_leave_transaction_confirmed(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    for shipment_status in ["dispatched", "in_transit", "delivered", "payment_pending", "completed"]:
+        response = client.patch(
+            f"/api/shipments/{shipment_id}/status",
+            json={"status": shipment_status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert response.status_code == 200, f"Failed at shipment status {shipment_status}: {response.text}"
+
+    txn_final = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert txn_final["status"] == "completed"
+    assert txn_final["status"] != "confirmed"
+
+
+def test_shipment_invalid_backward_transition_rejected(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched", "in_transit", "delivered", "payment_pending", "completed"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 409
+
+
+def test_shipment_advance_does_not_duplicate_payment(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    for status in ["confirmed", "dispatched", "in_transit"]:
+        client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "completed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_b}"}).json()
+    assert payments_resp["total"] == 1

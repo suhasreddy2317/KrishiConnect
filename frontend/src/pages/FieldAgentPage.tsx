@@ -395,7 +395,9 @@ export const FieldAgentPage: React.FC = () => {
           message="Lots, disputes, transactions, and offers are connected to live backend APIs. Assigned farmers and team activity are placeholders awaiting the backend list/search endpoints."
         />
 
-        <DashboardGrid columns={4}>
+        {activeTab === '/field-agent' && (
+          <>
+            <DashboardGrid columns={4}>
           <MetricCard
             label="Pending Verifications"
             value={String(lotsNeedingVerification.length)}
@@ -591,7 +593,185 @@ export const FieldAgentPage: React.FC = () => {
             </Card>
           </div>
         </div>
-      </MobileStack>
+          </>
+        )}
+        
+        {activeTab === '/field-agent/farmers' && (
+          <div className="space-y-6">
+            <Section title="Assigned Farmers" description="Farmers under your assistance queue.">
+              <Card variant="default" padding="none">
+                <div className="p-3 mx-3 mt-3 rounded-lg bg-surface-raised border border-border text-[11px] text-status-warning leading-relaxed">
+                  Demo data — farmer list/search API not yet implemented
+                </div>
+                <div className="divide-y divide-border">
+                  {[
+                    { name: 'Ramesh Patil', village: 'Nashik', crop: 'Red Onion', status: 'Assigned' },
+                    { name: 'Sunita Jadhav', village: 'Pune', crop: 'Soybean', status: 'Assigned' },
+                    { name: 'Arun Kulkarni', village: 'Solapur', crop: 'Wheat', status: 'Pending Review' },
+                  ].map((farmer, idx) => (
+                    <div key={idx} className="p-4 flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-lg bg-surface-raised border border-border flex items-center justify-center text-status-success shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-text-main truncate">{farmer.name}</div>
+                        <div className="text-xs text-text-muted">{farmer.village} · {farmer.crop}</div>
+                        <div className="mt-1">
+                          <StatusBadge status={farmer.status === 'Assigned' ? 'active' : 'pending-verification'} label={farmer.status} size="sm" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/field-agent/lots' && (
+          <div className="space-y-6">
+            <Section
+              title="Lots Pending Verification or Grading"
+              description="All lots from backend. Draft or incomplete lots need field-agent grading and evidence capture."
+              action={
+                <Button variant="ghost" size="sm" onClick={fetchLots}>Refresh Lots</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {lotsLoading ? (
+                  <LoadingState message="Loading lots..." />
+                ) : lotsError ? (
+                  <ErrorState title="Unable to load lots" message={lotsError} onRetry={fetchLots} />
+                ) : lots.length === 0 ? (
+                  <EmptyState icon={<Camera className="w-6 h-6" />} title="No lots yet" description="Lots will appear here once farmers publish produce." />
+                ) : (
+                  <Table
+                    columns={lotColumns}
+                    data={lots}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No lots found"
+                    onRowClick={handleLotRowClick}
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/field-agent/tasks' && (
+          <div className="space-y-6">
+            <Section
+              title="Pending Actions"
+              description="Items requiring immediate field-agent attention, derived from lots, disputes, and transactions."
+              action={
+                <Button variant="ghost" size="sm" onClick={() => { fetchLots(); fetchDisputes(); }}>Refresh</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {taskItems.length === 0 ? (
+                  <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title="All clear" description="No pending actions — lots and disputes are in good standing." />
+                ) : (
+                  <Table
+                    columns={taskColumns}
+                    data={taskItems}
+                    keyExtractor={(item) => item.id}
+                    emptyMessage="No pending actions"
+                    onRowClick={handleTaskRowClick}
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/field-agent/disputes' && (
+          <div className="space-y-6">
+            <Section
+              title="Disputes"
+              description="All disputes visible to field agents. Update status or add evidence where authorized."
+              action={
+                <Button variant="ghost" size="sm" onClick={fetchDisputes}>Refresh Disputes</Button>
+              }
+            >
+              <Card variant="default" padding="none">
+                {disputesLoading ? (
+                  <LoadingState message="Loading disputes..." />
+                ) : disputesError ? (
+                  <ErrorState title="Unable to load disputes" message={disputesError} onRetry={fetchDisputes} />
+                ) : disputes.length === 0 ? (
+                  <EmptyState icon={<AlertTriangle className="w-6 h-6" />} title="No disputes" description="Disputes will appear here when opened by buyers or farmers." />
+                ) : (
+                  <Table
+                    columns={disputeColumns}
+                    data={disputes}
+                    keyExtractor={(item) => String(item.id)}
+                    emptyMessage="No disputes"
+                    onRowClick={handleDisputeRowClick}
+                  />
+                )}
+              </Card>
+            </Section>
+          </div>
+        )}
+        
+        {activeTab === '/field-agent/activity' && (
+          <div className="space-y-6">
+            <Card variant="raised" padding="md" className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <WifiOff className="w-4 h-4 text-status-warning" />
+                <h3 className="text-sm font-semibold text-text-main">Field Mode Sync</h3>
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Monitor connectivity and queue pending uploads while operating in the field.
+              </p>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Status</span>
+                  <StatusBadge status="active" label="Online" size="sm" />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Synced Records</span>
+                  <span className="text-text-main font-mono">{lots.length + transactions.length + disputes.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Pending Upload</span>
+                  <span className="text-status-warning font-mono">{lotsNeedingVerification.length} lot{lotsNeedingVerification.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Last Synced</span>
+                  <DataFreshness timestamp="2m ago" />
+                </div>
+              </div>
+              <div className="pt-3 border-t border-border space-y-2">
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<UploadCloud className="w-3.5 h-3.5" />}>
+                  Sync Now
+                </Button>
+                <Button variant="ghost" size="sm" fullWidth leftIcon={<WifiOff className="w-3.5 h-3.5" />}>
+                  Go Offline
+                </Button>
+              </div>
+            </Card>
+
+            <Card variant="default" padding="md" className="space-y-3">
+              <h3 className="text-sm font-semibold text-text-main">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
+                  Add Farmer
+                </Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />}>
+                  Capture Evidence
+                </Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />}>
+                  Review Task
+                </Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />}>
+                  Report Issue
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+       </MobileStack>
 
       <Dialog isOpen={isAddFarmerOpen} onClose={handleCloseAddFarmer} title="Add Farmer" description="Register a new farmer profile under your assistance queue." maxWidth="sm" footer={
         <div className="flex items-center justify-end gap-3">

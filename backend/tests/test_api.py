@@ -16,8 +16,9 @@ _Session = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 client = TestClient(app)
 
 
-def _get_auth_headers(db_session) -> dict:
+def _get_auth_headers(db_session) -> tuple[dict, int]:
     from app.models.enums import UserRole
+    from app.models.farmer import Farmer
     from app.models.user import User
 
     user = User(name="Test User", phone="+919900000001", role=UserRole.farmer, password_hash=hash_password("testpassword"))
@@ -25,16 +26,21 @@ def _get_auth_headers(db_session) -> dict:
     db_session.commit()
     db_session.refresh(user)
 
+    farmer = Farmer(name="Test Farmer", phone=user.phone, user_id=user.id)
+    db_session.add(farmer)
+    db_session.commit()
+    db_session.refresh(farmer)
+
     response = client.post("/api/auth/login", json={"identifier": user.phone, "password": "testpassword"})
     assert response.status_code == 200
     token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return {"Authorization": f"Bearer {token}"}, farmer.id
 
 
 def test_create_farmer():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
+        headers = _get_auth_headers(db_session)[0]
         payload = {
             "name": "Test Farmer",
             "phone": "+919900000002",
@@ -55,7 +61,7 @@ def test_create_farmer():
 def test_get_farmer_not_found():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
+        headers = _get_auth_headers(db_session)[0]
         response = client.get("/api/farmers/99999", headers=headers)
         assert response.status_code == 404
     finally:
@@ -65,12 +71,7 @@ def test_get_farmer_not_found():
 def test_create_lot():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
-        farmer_payload = {"name": "Lot Farmer", "phone": "+919900000003"}
-        farmer_response = client.post("/api/farmers/", json=farmer_payload, headers=headers)
-        assert farmer_response.status_code == 201
-        farmer_id = farmer_response.json()["id"]
-
+        headers, farmer_id = _get_auth_headers(db_session)
         lot_payload = {
             "farmer_id": farmer_id,
             "crop": "Wheat",
@@ -92,7 +93,7 @@ def test_create_lot():
 def test_get_lots():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
+        headers = _get_auth_headers(db_session)[0]
         response = client.get("/api/lots/", headers=headers)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
@@ -103,7 +104,7 @@ def test_get_lots():
 def test_get_lot_not_found():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
+        headers = _get_auth_headers(db_session)[0]
         response = client.get("/api/lots/99999", headers=headers)
         assert response.status_code == 404
     finally:
@@ -113,11 +114,7 @@ def test_get_lot_not_found():
 def test_lot_status_default():
     db_session = _Session()
     try:
-        headers = _get_auth_headers(db_session)
-        farmer_payload = {"name": "Status Farmer", "phone": "+919900000004"}
-        farmer_response = client.post("/api/farmers/", json=farmer_payload, headers=headers)
-        farmer_id = farmer_response.json()["id"]
-
+        headers, farmer_id = _get_auth_headers(db_session)
         lot_payload = {
             "farmer_id": farmer_id,
             "crop": "Tomato",
@@ -127,6 +124,48 @@ def test_lot_status_default():
         response = client.post("/api/lots/", json=lot_payload, headers=headers)
         assert response.status_code == 201
         data = response.json()
-        assert data["status"] == "available"
+        assert data["status"] == "published"
+    finally:
+        db_session.close()
+
+
+def test_create_lot_farmer_without_farmer_id():
+    db_session = _Session()
+    try:
+        headers, farmer_id = _get_auth_headers(db_session)
+        lot_payload = {
+            "crop": "Wheat",
+            "quantity_kg": 5000,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["crop"] == "Wheat"
+        assert data["farmer_id"] == farmer_id
+        assert "id" in data
+    finally:
+        db_session.close()
+
+
+def test_create_lot_farmer_ignores_client_farmer_id():
+    db_session = _Session()
+    try:
+        headers, farmer1_id = _get_auth_headers(db_session)
+        farmer2_payload = {"name": "Farmer B", "phone": "+919900000002"}
+        farmer2_response = client.post("/api/farmers/", json=farmer2_payload, headers=headers)
+        assert farmer2_response.status_code == 201
+        farmer2_id = farmer2_response.json()["id"]
+
+        lot_payload = {
+            "farmer_id": farmer2_id,
+            "crop": "Wheat",
+            "quantity_kg": 5000,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["farmer_id"] == farmer1_id
     finally:
         db_session.close()

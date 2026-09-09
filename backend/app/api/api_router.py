@@ -18,6 +18,8 @@ from app.api.endpoints import payments
 from app.api.endpoints import disputes
 from app.api.endpoints import audit
 from app.api.endpoints import voice
+from app.api.endpoints import users
+from app.api.endpoints import markets
 
 
 api_router = APIRouter()
@@ -127,4 +129,16 @@ api_router.include_router(
     voice.router,
     prefix="/voice",
     tags=["Voice Assistant"],
+)
+
+api_router.include_router(
+    markets.router,
+    prefix="/markets",
+    tags=["Markets"],
+)
+
+api_router.include_router(
+    users.router,
+    prefix="/users",
+    tags=["Users"],
 )

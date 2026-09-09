@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.api_router import api_router
 from app.db.session import SessionLocal
-from app.services.transactions import reconcile_missing_payments
+from app.services.transactions import reconcile_missing_payments, reconcile_missing_shipments
 
 
 @asynccontextmanager
@@ -12,6 +12,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         reconcile_missing_payments(db)
+        reconcile_missing_shipments(db)
         db.commit()
     finally:
         db.close()

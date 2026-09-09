@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProduceLotCreate(BaseModel):
-    farmer_id: int
+    farmer_id: int | None = None
     crop: str
     commodity_id: int | None = None
     quantity_kg: float

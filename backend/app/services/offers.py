@@ -279,7 +279,7 @@ def accept_offer(db: Session, offer_id: int, actor_user_id: int, actor_role: Use
         offer_id=offer.id,
         quantity=offer.quantity,
         agreed_price=offer.offered_price,
-        total_amount=offer.quantity * offer.offered_price,
+        total_amount=(offer.quantity / 100) * offer.offered_price,
         actor_user_id=actor_user_id,
     )
     current = db.get(Offer, offer.parent_offer_id) if offer.parent_offer_id else None

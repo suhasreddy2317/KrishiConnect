@@ -21,7 +21,21 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+
+    let message: string;
+    if (typeof error.detail === 'string') {
+      message = error.detail;
+    } else if (Array.isArray(error.detail)) {
+      message = error.detail
+        .map((e: Record<string, unknown>) => (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e)))
+        .join('; ');
+    } else if (typeof error.detail === 'object' && error.detail !== null) {
+      message = JSON.stringify(error.detail);
+    } else {
+      message = `HTTP ${response.status}`;
+    }
+
+    throw new Error(message);
   }
 
   if (response.status === 204) {

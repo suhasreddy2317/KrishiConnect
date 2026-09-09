@@ -313,7 +313,7 @@ def seed_transactions(db: Session, users: dict[str, User], buyers: dict[str, Buy
         farmer_id=farmers["farmer_2"].id,
         quantity=6000,
         agreed_price=45.0,
-        total_amount=270000.0,
+        total_amount=2700.0,
         status=TransactionStatus.completed,
         confirmed_at=confirmed_at,
         completed_at=completed_at,
@@ -355,7 +355,7 @@ def seed_transactions(db: Session, users: dict[str, User], buyers: dict[str, Buy
         farmer_id=farmers["farmer_3"].id,
         quantity=2500,
         agreed_price=22.0,
-        total_amount=55000.0,
+        total_amount=550.0,
         status=TransactionStatus.disputed,
         confirmed_at=confirmed_at,
     )

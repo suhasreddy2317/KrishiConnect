@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.enums import UserRole
+from app.models.enums import LotStatus, UserRole
 from app.models.farmer import Farmer
 from app.models.produce_lot import ProduceLot
 from app.models.user import User
@@ -23,17 +23,21 @@ def create_lot(
 
     if current_user.role == UserRole.farmer:
         farmer = db.query(Farmer).filter(Farmer.user_id == current_user.id).first()
-        if farmer:
-            farmer_id = farmer.id
+        if not farmer:
+            raise HTTPException(status_code=404, detail="Farmer profile not found")
+        farmer_id = farmer.id
 
-    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
-    if not farmer:
+    resolved_farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not resolved_farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
     lot = ProduceLot(
         **lot_data.model_dump(exclude={"farmer_id"}),
         farmer_id=farmer_id,
     )
+
+    if current_user.role == UserRole.farmer:
+        lot.status = LotStatus.published.value
 
     db.add(lot)
     db.commit()

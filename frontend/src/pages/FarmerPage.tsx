@@ -11,6 +11,8 @@ import { LoadingState } from '@/components/data-display/LoadingState';
 import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { Drawer } from '@/components/ui/Drawer';
@@ -52,6 +54,17 @@ interface BackendLot {
   expected_price_per_kg: number | null;
   status: string;
   farmer_id: number;
+}
+
+interface BackendCommodity {
+  id: number;
+  name: string;
+  variety: string | null;
+  unit: string;
+  is_perishable: boolean;
+  perishability_profile: string | null;
+  grading_parameters: string | null;
+  is_active: boolean;
 }
 
 interface BackendOffer {
@@ -138,7 +151,19 @@ export const FarmerPage: React.FC = () => {
   const { language } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak } = useTextToSpeech();
   const [activeTab, setActiveTab] = useState<TabId>('/farmer');
+  const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [isLotDrawerOpen, setIsLotDrawerOpen] = useState(false);
+  const [lotCrop, setLotCrop] = useState('');
+  const [lotQuantity, setLotQuantity] = useState('');
+  const [lotQualityGrade, setLotQualityGrade] = useState('');
+  const [lotMoisture, setLotMoisture] = useState('');
+  const [lotHarvestDate, setLotHarvestDate] = useState('');
+  const [lotLocation, setLotLocation] = useState('');
+  const [lotExpectedPrice, setLotExpectedPrice] = useState('');
+  const [commodities, setCommodities] = useState<BackendCommodity[]>([]);
+  const [lotFormErrors, setLotFormErrors] = useState<Record<string, string>>({});
+  const [lotSubmitting, setLotSubmitting] = useState(false);
+  const [lotSubmitError, setLotSubmitError] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [confirmMessage, setConfirmMessage] = useState('');
@@ -225,6 +250,12 @@ export const FarmerPage: React.FC = () => {
     fetchDisputes();
   }, [token]);
 
+  useEffect(() => {
+    if (isLotDrawerOpen && token) {
+      fetchCommodities();
+    }
+  }, [isLotDrawerOpen, token]);
+
   const fetchLots = async () => {
     if (!token) return;
     setLotsLoading(true);
@@ -236,6 +267,16 @@ export const FarmerPage: React.FC = () => {
       setLotsError(err instanceof Error ? err.message : 'Failed to load lots');
     } finally {
       setLotsLoading(false);
+    }
+  };
+
+  const fetchCommodities = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<BackendCommodity[]>('/commodities/', { method: 'GET' }, token);
+      setCommodities(data);
+    } catch (err) {
+      console.error('Failed to load commodities', err);
     }
   };
 
@@ -272,8 +313,8 @@ export const FarmerPage: React.FC = () => {
     setShipmentsLoading(true);
     setShipmentsError(null);
     try {
-      const data = await apiRequest<BackendShipment[]>('/shipments/', { method: 'GET' }, token);
-      setShipments(data);
+      const data = await apiRequest<{ items: BackendShipment[]; total: number }>('/shipments/', { method: 'GET' }, token);
+      setShipments(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       setShipmentsError(err instanceof Error ? err.message : 'Failed to load shipments');
     } finally {
@@ -309,12 +350,72 @@ export const FarmerPage: React.FC = () => {
     }
   };
 
+  const validateLotForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!lotCrop) errors.crop = 'Crop is required';
+    if (!lotQuantity || parseFloat(lotQuantity) <= 0) errors.quantity = 'Quantity must be greater than 0';
+    if (!lotQualityGrade.trim()) errors.qualityGrade = 'Quality grade is required';
+    if (lotMoisture && parseFloat(lotMoisture) < 0) errors.moisture = 'Moisture cannot be negative';
+    if (lotExpectedPrice && parseFloat(lotExpectedPrice) < 0) errors.expectedPrice = 'Price cannot be negative';
+
+    setLotFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateLot = async () => {
+    if (!token) return;
+
+    if (!validateLotForm()) return;
+
+    setLotSubmitting(true);
+    setLotSubmitError(null);
+
+    try {
+      const selectedCommodity = commodities.find(c => String(c.id) === lotCrop);
+      const payload: Record<string, unknown> = {
+        crop: selectedCommodity ? selectedCommodity.name : lotCrop,
+        commodity_id: selectedCommodity ? selectedCommodity.id : null,
+        quantity_kg: parseFloat(lotQuantity),
+        quality_grade: lotQualityGrade,
+      };
+
+      if (lotMoisture) payload.moisture_percent = parseFloat(lotMoisture);
+      if (lotHarvestDate) payload.harvest_date = lotHarvestDate;
+      if (lotLocation) payload.location = lotLocation;
+      if (lotExpectedPrice) payload.expected_price_per_kg = parseFloat(lotExpectedPrice);
+
+      await apiRequest('/lots/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, token);
+
+      setLotCrop('');
+      setLotQuantity('');
+      setLotQualityGrade('');
+      setLotMoisture('');
+      setLotHarvestDate('');
+      setLotLocation('');
+      setLotExpectedPrice('');
+      setLotFormErrors({});
+      setLotSubmitError(null);
+      setIsLotDrawerOpen(false);
+
+      await fetchLots();
+    } catch (err) {
+      setLotSubmitError(err instanceof Error ? err.message : 'Failed to create lot');
+    } finally {
+      setLotSubmitting(false);
+    }
+  };
+
   const fetchRecommendation = async () => {
     if (!token) return;
     setRecommendationLoading(true);
     setRecommendationError(null);
     try {
-      const bestLot = lots.find(l => l.status === 'published') || lots[0];
+      const sortedLots = [...lots].sort((a, b) => b.id - a.id);
+      const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
       if (!bestLot || bestLot.commodity_id == null) {
         setRecommendation(null);
         setRecommendationLoading(false);
@@ -353,7 +454,8 @@ export const FarmerPage: React.FC = () => {
   const buildVoiceResponseText = useCallback(
     (rec: SaleWindowResponse | null): string => {
       if (!rec) {
-        const bestLot = lots.find(l => l.status === 'published') || lots[0];
+        const sortedLots = [...lots].sort((a, b) => b.id - a.id);
+        const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
         const crop = bestLot?.crop || 'your crop';
         return `${crop}. Recommendation: data is being loaded. Please wait or ask again.`;
       }
@@ -419,7 +521,7 @@ export const FarmerPage: React.FC = () => {
 
   const handleAcceptOffer = async (offer: BackendOffer) => {
     if (!token) return;
-    requestConfirm(`Accept offer of ₹${offer.offered_price}/qtl for ${offer.quantity} units?`, async () => {
+    requestConfirm(`Accept offer of ₹${offer.offered_price}/qtl for ${offer.quantity} kg?`, async () => {
       try {
         await apiRequest(`/offers/${offer.id}/accept`, { method: 'POST' }, token);
         await fetchOffers();
@@ -475,6 +577,14 @@ export const FarmerPage: React.FC = () => {
     payment_pending: ['completed'],
   };
 
+  const NEXT_SHIPMENT_TRANSITION: Record<string, string[]> = {
+    pending: ['dispatched'],
+    dispatched: ['in_transit'],
+    in_transit: ['delivered'],
+    delivered: ['payment_pending'],
+    payment_pending: ['completed'],
+  };
+
   const handleUpdateTransactionStatus = async (transactionId: number, status: string, currentStatus: string) => {
     if (!token) return;
     if (status === currentStatus) return;
@@ -501,7 +611,9 @@ export const FarmerPage: React.FC = () => {
           method: 'PATCH',
           body: JSON.stringify({ status }),
         }, token);
+        await fetchTransactions();
         await fetchShipments();
+        await fetchPayments();
       } catch (err) {
         setShipmentsError(err instanceof Error ? err.message : 'Failed to update shipment');
       }
@@ -545,7 +657,8 @@ export const FarmerPage: React.FC = () => {
   };
 
   const renderDecisionHome = () => {
-    const bestLot = lots.find(l => l.status === 'published') || lots[0];
+    const sortedLots = [...lots].sort((a, b) => b.id - a.id);
+    const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
     const activeTransaction = transactions[0];
 
     const displayRecommendation = recommendation;
@@ -698,7 +811,7 @@ export const FarmerPage: React.FC = () => {
           <Card key={lot.id} variant="default" title={lot.crop} subtitle={`${lot.quantity_kg} ${lot.unit} • Grade ${lot.quality_grade}`} headerAction={<StatusBadge status="grade" label={lot.quality_grade} size="sm" />}>
             <div className="flex items-center justify-between">
               <div className="text-xs text-text-muted font-mono">Lot ID: #{lot.id} • Status: {lot.status} {lot.harvest_date ? `• Harvest: ${lot.harvest_date}` : ''} {lot.location ? `• ${lot.location}` : ''}</div>
-              <Button size="sm" variant="outline" onClick={() => setActiveTab('/farmer/offers')}>View Offers</Button>
+              <Button size="sm" variant="outline" onClick={() => { setSelectedLotId(lot.id); setActiveTab('/farmer/offers'); }}>View Offers</Button>
             </div>
           </Card>
         ))}
@@ -709,11 +822,21 @@ export const FarmerPage: React.FC = () => {
   const renderOffersTab = () => {
     if (offersLoading) return <LoadingState message="Loading buyer offers..." />;
     if (offersError) return <ErrorState title="Unable to load offers" message={offersError} onRetry={fetchOffers} />;
-    if (offers.length === 0) return <EmptyState icon={<Clock className="w-6 h-6" />} title="No offers yet" description="Published lots will receive structured buyer offers with 48h locking expiry." />;
+
+    const filteredOffers = selectedLotId ? offers.filter(offer => offer.lot_id === selectedLotId) : offers;
+
+    if (filteredOffers.length === 0) {
+      if (selectedLotId) {
+        const lot = lots.find(l => l.id === selectedLotId);
+        const lotLabel = lot ? `Lot #${selectedLotId} (${lot.crop})` : `Lot #${selectedLotId}`;
+        return <EmptyState icon={<Clock className="w-6 h-6" />} title={`No offers yet for ${lotLabel}.`} description="Published lots will receive structured buyer offers with 48h locking expiry." />;
+      }
+      return <EmptyState icon={<Clock className="w-6 h-6" />} title="No offers yet" description="Published lots will receive structured buyer offers with 48h locking expiry." />;
+    }
 
     return (
       <div className="space-y-3">
-        {offers.map(offer => (
+        {filteredOffers.map(offer => (
           <div key={offer.id} className="p-4 rounded-lg bg-surface-raised border border-status-success/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center space-x-2">
@@ -721,7 +844,7 @@ export const FarmerPage: React.FC = () => {
                 <StatusBadge status={offer.status === 'accepted' ? 'verified-buyer' : offer.status === 'rejected' ? 'warning' : 'pending-verification'} label={offer.status} size="sm" />
               </div>
               <div className="text-xs text-text-muted mt-1 font-mono">
-                Offer: <span className="text-accent font-bold">₹{offer.offered_price} / qtl</span> • {offer.quantity} units • Lot #{offer.lot_id} • Round {offer.round}
+                 Offer: <span className="text-accent font-bold">₹{offer.offered_price} / qtl</span> • {offer.quantity} kg • Lot #{offer.lot_id} • Round {offer.round}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -750,7 +873,7 @@ export const FarmerPage: React.FC = () => {
         {transactions.map(tx => (
           <Card key={tx.id} variant="default" title={`Transaction #${tx.id}`} subtitle={`Lot #${tx.lot_id} • Buyer #${tx.buyer_id}`} headerAction={<StatusBadge status={tx.status === 'completed' ? 'completed' : 'active'} label={tx.status} size="sm" />}>
             <div className="text-xs text-text-muted font-mono space-y-1">
-              <div>Agreed Price: ₹{tx.agreed_price}/qtl • Quantity: {tx.quantity} • Total: ₹{tx.total_amount}</div>
+              <div>Agreed Price: ₹{tx.agreed_price}/qtl • Quantity: {tx.quantity} kg • Total: ₹{tx.total_amount}</div>
               <div>Created: {new Date(tx.created_at).toLocaleString()}</div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -773,7 +896,7 @@ export const FarmerPage: React.FC = () => {
     return (
       <div className="space-y-4">
         {shipments.map(shipment => (
-          <Card key={shipment.id} variant="default" title={`Shipment #${shipment.id}`} subtitle={`Transaction #${shipment.transaction_id}`} headerAction={<StatusBadge status={shipment.status === 'delivered' ? 'completed' : 'active'} label={shipment.status} size="sm" />}>
+          <Card key={shipment.id} variant="default" title={`Shipment #${shipment.id}`} subtitle={`Transaction #${shipment.transaction_id}`} headerAction={<StatusBadge status={['delivered', 'payment_pending', 'completed'].includes(shipment.status) ? 'completed' : 'active'} label={shipment.status} size="sm" />}>
             <div className="text-xs text-text-muted font-mono space-y-1">
               <div>Pickup: {shipment.pickup_location} • Delivery: {shipment.delivery_location}</div>
               {shipment.transporter_name && <div>Transporter: {shipment.transporter_name} • Vehicle: {shipment.vehicle_number}</div>}
@@ -781,7 +904,7 @@ export const FarmerPage: React.FC = () => {
               {shipment.estimated_delivery && <div>Est. Delivery: {new Date(shipment.estimated_delivery).toLocaleString()}</div>}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {['picked_up', 'in_transit', 'delivered'].map(next => (
+              {shipment.status !== 'completed' && (NEXT_SHIPMENT_TRANSITION[shipment.status] || []).map(next => (
                 <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateShipmentStatus(shipment.id, next)}>Mark {next}</Button>
               ))}
             </div>
@@ -849,7 +972,7 @@ export const FarmerPage: React.FC = () => {
   };
 
   return (
-    <AppShell forcedRole="farmer" activeSubTab={activeTab} onSelectSubTab={(path) => setActiveTab(path as TabId)}>
+    <AppShell forcedRole="farmer" activeSubTab={activeTab} onSelectSubTab={(path) => { setSelectedLotId(null); setActiveTab(path as TabId); }}>
       <MobileStack spacing="md">
         <PageHeader
           title="Farmer Decision Workspace"
@@ -863,7 +986,7 @@ export const FarmerPage: React.FC = () => {
           }
         />
 
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as TabId)} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => { setSelectedLotId(null); setActiveTab(id as TabId); }} />
 
         {activeTab === '/farmer' && renderDecisionHome()}
         {activeTab === '/farmer/market' && renderMarketTab()}
@@ -877,11 +1000,144 @@ export const FarmerPage: React.FC = () => {
 
       <Drawer isOpen={isLotDrawerOpen} onClose={() => setIsLotDrawerOpen(false)} title="Create Produce Lot" description="Provide crop specifications, estimated quantity, and provisional photos." position="bottom">
         <div className="space-y-4">
-          <div className="p-4 rounded-lg bg-surface border border-border space-y-2 text-xs text-text-muted">
-            <p>In accordance with Phase 1 Foundation, lot submission business logic will be integrated in Phase 3.</p>
-            <p className="text-accent">Form controls, touch targets, and offline sync caching are ready in this UI shell.</p>
+          {lotSubmitError && (
+            <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/30 text-xs text-status-error">
+              {lotSubmitError}
+            </div>
+          )}
+
+          <Select
+            label="Crop / Commodity"
+            helperText="Select the crop you want to sell"
+            error={lotFormErrors.crop}
+            options={[
+              { value: '', label: 'Select crop...', disabled: true },
+              ...commodities.map(c => ({ value: String(c.id), label: c.name })),
+            ]}
+            value={lotCrop}
+            onChange={(e) => {
+              setLotCrop(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, crop: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Quantity (kg)"
+            helperText="Total quantity available"
+            error={lotFormErrors.quantity}
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="e.g. 1000"
+            value={lotQuantity}
+            onChange={(e) => {
+              setLotQuantity(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, quantity: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Quality Grade"
+            helperText="e.g. Grade A, Grade B"
+            error={lotFormErrors.qualityGrade}
+            placeholder="e.g. Grade A"
+            value={lotQualityGrade}
+            onChange={(e) => {
+              setLotQualityGrade(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, qualityGrade: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Moisture %"
+            helperText="Optional"
+            error={lotFormErrors.moisture}
+            type="number"
+            min="0"
+            step="0.1"
+            placeholder="e.g. 12.5"
+            value={lotMoisture}
+            onChange={(e) => {
+              setLotMoisture(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, moisture: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Harvest Date"
+            helperText="Optional"
+            error={lotFormErrors.harvestDate}
+            type="date"
+            value={lotHarvestDate}
+            onChange={(e) => {
+              setLotHarvestDate(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, harvestDate: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Location"
+            helperText="Optional"
+            error={lotFormErrors.location}
+            placeholder="e.g. Nashik"
+            value={lotLocation}
+            onChange={(e) => {
+              setLotLocation(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, location: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <Input
+            label="Expected Price / kg"
+            helperText="Optional"
+            error={lotFormErrors.expectedPrice}
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="e.g. 24.00"
+            value={lotExpectedPrice}
+            onChange={(e) => {
+              setLotExpectedPrice(e.target.value);
+              setLotFormErrors(prev => ({ ...prev, expectedPrice: '' }));
+            }}
+            disabled={lotSubmitting}
+          />
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={handleCreateLot}
+              isLoading={lotSubmitting}
+              disabled={lotSubmitting}
+            >
+              Create Lot
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsLotDrawerOpen(false);
+                setLotCrop('');
+                setLotQuantity('');
+                setLotQualityGrade('');
+                setLotMoisture('');
+                setLotHarvestDate('');
+                setLotLocation('');
+                setLotExpectedPrice('');
+                setLotFormErrors({});
+                setLotSubmitError(null);
+              }}
+              disabled={lotSubmitting}
+            >
+              Cancel
+            </Button>
           </div>
-          <Button variant="secondary" fullWidth onClick={() => setIsLotDrawerOpen(false)}>Close Drawer</Button>
         </div>
       </Drawer>
 

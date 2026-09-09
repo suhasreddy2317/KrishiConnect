@@ -368,5 +368,7 @@ def test_audit_log_append_only(data):
 
     second = client.get("/api/audit/", headers={"Authorization": f"Bearer {token_admin}"}).json()
     second_total = second["total"]
-    assert second_total == first_total + 1
-    assert second["items"][0]["action"] == "transaction.status.updated"
+    assert second_total == first_total + 2
+    actions = {item["action"] for item in second["items"]}
+    assert "transaction.status.updated" in actions
+    assert "shipment.created" in actions

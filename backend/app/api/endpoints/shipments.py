@@ -7,7 +7,7 @@ from app.models.farmer import Farmer
 from app.models.shipment import Shipment
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.shipment import ShipmentCreate, ShipmentUpdate, ShipmentResponse
+from app.schemas.shipment import ShipmentCreate, ShipmentUpdate, ShipmentResponse, ShipmentListResponse
 from app.services.transactions import TransactionError, create_shipment, update_shipment_status
 from app.utils.dependencies import get_current_user, require_roles
 
@@ -51,6 +51,20 @@ def _assert_shipment_visible(db: Session, shipment: Shipment, current_user: User
             raise HTTPException(status_code=403, detail="Not authorized to view this shipment")
     else:
         raise HTTPException(status_code=403, detail="Not authorized to view this shipment")
+
+
+@router.get("/", response_model=ShipmentListResponse)
+def list_shipments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin
+    )),
+    skip: int = 0,
+    limit: int = 100,
+):
+    query = _shipments_visible_to(db, current_user).order_by(Shipment.created_at.desc())
+    shipments = query.offset(skip).limit(limit).all()
+    return ShipmentListResponse(items=shipments, total=query.count())
 
 
 @router.post("/", response_model=ShipmentResponse, status_code=201)

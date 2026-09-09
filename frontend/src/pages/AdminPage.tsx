@@ -19,6 +19,7 @@ import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Table } from '@/components/data-display/Table';
+import { Select } from '@/components/ui/Select';
 import {
   ShieldCheck,
   FileCheck,
@@ -117,6 +118,26 @@ interface BackendUser {
   updated_at: string;
 }
 
+interface BackendCommodity {
+  id: number;
+  name: string;
+  variety: string | null;
+  unit: string;
+  is_perishable: boolean;
+  perishability_profile: string | null;
+  grading_parameters: string | null;
+  is_active: boolean;
+}
+
+interface BackendMarket {
+  id: number;
+  name: string;
+  location: string | null;
+  region: string | null;
+  state: string | null;
+  is_active: boolean;
+}
+
 interface TransactionListResponse {
   items: BackendTransaction[];
   total: number;
@@ -160,6 +181,29 @@ export const AdminPage: React.FC = () => {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [users, setUsers] = useState<BackendUser[]>([]);
 
+  const [commoditiesError, setCommoditiesError] = useState<string | null>(null);
+  const [commodities, setCommodities] = useState<BackendCommodity[]>([]);
+
+  const [marketsError, setMarketsError] = useState<string | null>(null);
+  const [markets, setMarkets] = useState<BackendMarket[]>([]);
+
+  const [selectedCommodityId, setSelectedCommodityId] = useState<number | null>(null);
+  const [selectedMarketId, setSelectedMarketId] = useState<number | null>(null);
+  const [marketHistory, setMarketHistory] = useState<MarketHistoryItem[]>([]);
+  const [marketHistoryLoading, setMarketHistoryLoading] = useState(false);
+  const [marketHistoryError, setMarketHistoryError] = useState<string | null>(null);
+
+  interface MarketHistoryItem {
+    date: string;
+    min_price: number | null;
+    max_price: number | null;
+    modal_price: number | null;
+    arrival_volume: number | null;
+    source: string | null;
+    market_name: string;
+    commodity_name: string;
+  }
+
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: '/admin', label: 'Dashboard' },
     { id: '/admin/users', label: 'Users' },
@@ -180,7 +224,15 @@ export const AdminPage: React.FC = () => {
     fetchAuditLogs();
     fetchBuyers();
     fetchUsers();
+    fetchCommodities();
+    fetchMarkets();
   }, [token]);
+
+  useEffect(() => {
+    if (selectedCommodityId && selectedMarketId) {
+      fetchMarketHistory();
+    }
+  }, [selectedCommodityId, selectedMarketId]);
 
   const fetchLots = async () => {
     if (!token) return;
@@ -264,6 +316,53 @@ export const AdminPage: React.FC = () => {
       setUsers([]);
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  const fetchCommodities = async () => {
+    if (!token) return;
+    setCommoditiesError(null);
+    try {
+      const data = await apiRequest<BackendCommodity[]>('/commodities/', { method: 'GET' }, token);
+      setCommodities(data);
+    } catch (err) {
+      setCommoditiesError(err instanceof Error ? err.message : 'Failed to load commodities');
+    }
+  };
+
+  const fetchMarkets = async () => {
+    if (!token) return;
+    setMarketsError(null);
+    try {
+      const data = await apiRequest<BackendMarket[]>('/markets/', { method: 'GET' }, token);
+      setMarkets(data);
+    } catch (err) {
+      setMarketsError(err instanceof Error ? err.message : 'Failed to load markets');
+    }
+  };
+
+  const fetchMarketHistory = async () => {
+    if (!token || !selectedCommodityId || !selectedMarketId) return;
+    setMarketHistoryLoading(true);
+    setMarketHistoryError(null);
+    try {
+      const data = await apiRequest<{ history: MarketHistoryItem[] }>(
+        `/market-prices/history?commodity_id=${selectedCommodityId}&market_id=${selectedMarketId}&days=14`,
+        { method: 'GET' },
+        token
+      );
+      setMarketHistory(
+        data.history.map((item) => ({
+          ...item,
+          market_name: markets.find(m => m.id === selectedMarketId)?.name || `Market #${selectedMarketId}`,
+          commodity_name: commodities.find(c => c.id === selectedCommodityId)?.name || `Commodity #${selectedCommodityId}`,
+        }))
+      );
+    } catch (err) {
+      setMarketHistoryError(err instanceof Error ? err.message : 'Failed to load market price history');
+      setMarketHistory([]);
+    } finally {
+      setMarketHistoryLoading(false);
     }
   };
 
@@ -741,23 +840,78 @@ export const AdminPage: React.FC = () => {
   };
 
   const renderMarketDataTab = () => {
+    const activeMarkets = markets.filter(m => m.is_active);
+    const activeCommodities = commodities.filter(c => c.is_active);
+
+    const getMarketName = (id: number) => markets.find(m => m.id === id)?.name || `Market #${id}`;
+    const getCommodityName = (id: number) => commodities.find(c => c.id === id)?.name || `Commodity #${id}`;
+
+    const enrichedHistory = marketHistory.map((item) => ({
+      ...item,
+      market_name: getMarketName(selectedMarketId!),
+      commodity_name: getCommodityName(selectedCommodityId!),
+    }));
+
     return (
       <div className="space-y-6">
-        <AlertBanner variant="info" title="Market Data" message="Market price history is available via GET /market-prices/history but requires commodity/market selection. Showing demo placeholder below." />
-        <Section title="Market Data Freshness" description="Seeded demo data — not live government feeds.">
+        <AlertBanner variant="info" title="Market Data" message="Price history is fetched from GET /api/market-prices/history. Select a commodity and market to view price records." />
+        <Section title="Market Price History" description="Select a commodity and market to view recent price benchmarks.">
           <Card variant="default" padding="none">
-            <Table
-              columns={[
-                { key: 'market', header: 'Market', align: 'left' as const },
-                { key: 'crop', header: 'Crop', align: 'left' as const },
-                { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true },
-                { key: 'source', header: 'Source', align: 'left' as const },
-                { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={item.updated} /> },
-              ]}
-              data={[]}
-              keyExtractor={(item) => item.market}
-              emptyMessage="No market data available"
-            />
+            <div className="p-4 flex flex-wrap items-end gap-4">
+              <Select
+                label="Commodity"
+                helperText="Required"
+                error={selectedCommodityId ? undefined : 'Select a commodity'}
+                options={[
+                  { value: '', label: 'Select commodity...', disabled: true },
+                  ...activeCommodities.map(c => ({ value: String(c.id), label: `${c.name}${c.variety ? ` (${c.variety})` : ''}` })),
+                ]}
+                value={selectedCommodityId ? String(selectedCommodityId) : ''}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCommodityId(e.target.value ? Number(e.target.value) : null)}
+              />
+              <Select
+                label="Market"
+                helperText="Required"
+                error={selectedMarketId ? undefined : 'Select a market'}
+                options={[
+                  { value: '', label: 'Select market...', disabled: true },
+                  ...activeMarkets.map(m => ({ value: String(m.id), label: `${m.name}${m.location ? `, ${m.location}` : ''}` })),
+                ]}
+                value={selectedMarketId ? String(selectedMarketId) : ''}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMarketId(e.target.value ? Number(e.target.value) : null)}
+              />
+              <Button variant="secondary" size="sm" leftIcon={<Activity className="w-3.5 h-3.5" />} onClick={fetchMarketHistory} disabled={!selectedCommodityId || !selectedMarketId || marketHistoryLoading}>
+                Refresh
+              </Button>
+            </div>
+            {marketsError || commoditiesError ? (
+              <ErrorState title="Unable to load reference data" message={marketsError || commoditiesError || 'Failed to load markets or commodities'} onRetry={() => { fetchMarkets(); fetchCommodities(); }} />
+            ) : marketHistoryLoading ? (
+              <LoadingState message="Loading market price history..." />
+            ) : marketHistoryError ? (
+              <ErrorState title="Unable to load market data" message={marketHistoryError} onRetry={fetchMarketHistory} />
+            ) : !selectedCommodityId || !selectedMarketId ? (
+              <EmptyState icon={<LineChart className="w-6 h-6" />} title="Select filters" description="Choose a commodity and market above to load price history." />
+            ) : enrichedHistory.length === 0 ? (
+              <EmptyState icon={<LineChart className="w-6 h-6" />} title="No price history" description="No market price records found for the selected commodity and market." />
+            ) : (
+              <Table
+                columns={[
+                  { key: 'date', header: 'Date', align: 'left' as const },
+                  { key: 'market_name', header: 'Market', align: 'left' as const },
+                  { key: 'commodity_name', header: 'Commodity', align: 'left' as const },
+                  { key: 'min_price', header: 'Min Price', align: 'right' as const, isNumeric: true },
+                  { key: 'max_price', header: 'Max Price', align: 'right' as const, isNumeric: true },
+                  { key: 'modal_price', header: 'Modal Price', align: 'right' as const, isNumeric: true },
+                  { key: 'arrival_volume', header: 'Arrival', align: 'right' as const, isNumeric: true },
+                  { key: 'source', header: 'Source', align: 'left' as const },
+                  { key: 'updated', header: 'Updated', align: 'left' as const, render: (item: any) => <DataFreshness timestamp={new Date(item.date).toLocaleDateString()} /> },
+                ]}
+                data={enrichedHistory}
+                keyExtractor={(item) => `${item.date}-${selectedMarketId}-${selectedCommodityId}-${item.market_name}-${item.commodity_name}`}
+                emptyMessage="No market data available"
+              />
+            )}
           </Card>
         </Section>
       </div>
