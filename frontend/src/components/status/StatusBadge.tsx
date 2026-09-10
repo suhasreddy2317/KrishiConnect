@@ -20,7 +20,10 @@ export type StatusType =
   | 'sync-pending'
   | 'grade'
   | 'active'
-  | 'completed';
+  | 'completed'
+  | 'expired'
+  | 'cancelled'
+  | 'suspended';
 
 export interface StatusBadgeProps {
   status: StatusType;
@@ -88,6 +91,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       defaultLabel: 'Settled',
       icon: CheckCircle2,
       colorClasses: 'bg-status-success/15 border-status-success/50 text-status-success',
+    },
+    expired: {
+      defaultLabel: 'Expired',
+      icon: Clock,
+      colorClasses: 'bg-status-warning/15 border-status-warning/50 text-status-warning',
+    },
+    cancelled: {
+      defaultLabel: 'Cancelled',
+      icon: AlertOctagon,
+      colorClasses: 'bg-status-error/15 border-status-error/50 text-status-error',
+    },
+    suspended: {
+      defaultLabel: 'Suspended',
+      icon: AlertOctagon,
+      colorClasses: 'bg-status-error/15 border-status-error/50 text-status-error',
     },
   };
 

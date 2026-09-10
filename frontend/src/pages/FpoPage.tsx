@@ -140,12 +140,12 @@ const mapLotStatus = (status: string): 'active' | 'kyc-verified' | 'completed' |
   return map[status] || 'pending-verification';
 };
 
-const mapDemandStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' => {
-  const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification'> = {
+const mapDemandStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' | 'expired' | 'cancelled' | 'suspended' => {
+  const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'expired' | 'cancelled' | 'suspended'> = {
     active: 'active',
     fulfilled: 'completed',
     expired: 'warning',
-    cancelled: 'completed',
+    cancelled: 'cancelled',
   };
   return map[status] || 'active';
 };
@@ -303,12 +303,12 @@ export const FpoPage: React.FC = () => {
     { key: 'quantity', header: 'Qty', align: 'right' as const, isNumeric: true, render: (item: BackendOffer) => <span className="text-xs font-mono text-text-main">{item.quantity.toLocaleString()} kg</span> },
     { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true, render: (item: BackendOffer) => <span className="text-xs font-mono text-accent">₹{item.offered_price.toLocaleString()}/qtl</span> },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: BackendOffer) => {
-      const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification'> = {
+      const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'expired' | 'cancelled' | 'suspended'> = {
         submitted: 'pending-verification',
         countered: 'warning',
         accepted: 'active',
         rejected: 'completed',
-        expired: 'completed',
+        expired: 'expired',
       };
       return <StatusBadge status={map[item.status] || 'active'} label={item.status} size="sm" />;
     }},

@@ -667,27 +667,6 @@ export const AdminPage: React.FC = () => {
               />
             </Card>
 
-            <Card variant="default" padding="md" title="Recent Audit Activity">
-              {auditLoading ? (
-                <LoadingState message="Loading audit logs..." />
-              ) : auditError ? (
-                <ErrorState title="Unable to load audit logs" message={auditError} onRetry={fetchAuditLogs} />
-              ) : !auditLogs || auditLogs.items.length === 0 ? (
-                <EmptyState icon={<ClipboardList className="w-6 h-6" />} title="No audit logs" description="Administrative actions will be recorded here." />
-              ) : (
-                <Timeline
-                  items={auditLogs.items.slice(0, 10).map((log) => ({
-                    id: String(log.id),
-                    actor: log.actor_user_id ? `User #${log.actor_user_id}` : 'System',
-                    role: 'admin',
-                    description: `${log.action} — ${log.entity_type} #${log.entity_id}${log.details ? `: ${log.details}` : ''}`,
-                    timestamp: new Date(log.created_at).toLocaleString(),
-                    status: 'accepted',
-                  }))}
-                />
-              )}
-            </Card>
-
             <Card variant="default" padding="md" title="Quick Governance Actions">
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<FileCheck className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/verification')}>Review Buyers</Button>
@@ -700,6 +679,29 @@ export const AdminPage: React.FC = () => {
             </Card>
           </div>
         </div>
+
+        <Section title="Recent Audit Activity" description="Recent administrative actions recorded in the platform audit trail.">
+          <Card variant="default" padding="none">
+            {auditLoading ? (
+              <LoadingState message="Loading audit logs..." />
+            ) : auditError ? (
+              <ErrorState title="Unable to load audit logs" message={auditError} onRetry={fetchAuditLogs} />
+            ) : !auditLogs || auditLogs.items.length === 0 ? (
+              <EmptyState icon={<ClipboardList className="w-6 h-6" />} title="No audit logs" description="Administrative actions will be recorded here." />
+            ) : (
+              <Timeline
+                items={auditLogs.items.slice(0, 10).map((log) => ({
+                  id: String(log.id),
+                  actor: log.actor_user_id ? `User #${log.actor_user_id}` : 'System',
+                  role: 'admin',
+                  description: `${log.action} — ${log.entity_type} #${log.entity_id}${log.details ? `: ${log.details}` : ''}`,
+                  timestamp: new Date(log.created_at).toLocaleString(),
+                  status: 'accepted',
+                }))}
+              />
+            )}
+          </Card>
+        </Section>
 
         <Card variant="default" padding="md">
           <div className="flex items-start space-x-4">

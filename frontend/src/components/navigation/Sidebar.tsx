@@ -38,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={cn(
         'hidden md:flex flex-col shrink-0 border-r border-border bg-surface transition-all duration-200 sticky top-0 h-screen z-30',
-        isCollapsed ? 'w-18' : 'w-64',
+        isCollapsed ? 'w-[4.5rem]' : 'w-64',
         className
       )}
     >
@@ -113,9 +113,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             cn(
               'flex items-center space-x-3 px-3 py-2 rounded-md text-xs font-medium transition-colors select-none',
               isActive
-                ? 'border font-semibold'
-                : 'text-text-muted hover:bg-surface-raised hover:text-text-main',
-              isActive && 'border'
+                ? ''
+                : 'text-text-muted hover:bg-surface-raised hover:text-text-main'
             )
           }
           style={({ isActive }: { isActive?: boolean }) => ({

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 export const LoginPage: React.FC = () => {
   const [identifier, setIdentifier] = useState('');
@@ -40,42 +43,27 @@ export const LoginPage: React.FC = () => {
           <p className="text-text-muted mt-2 text-sm">Agricultural market intelligence & trading platform</p>
         </div>
 
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold text-text-main">Sign in</h2>
-            <p className="text-xs text-text-muted mt-1">Enter your phone number and password to continue</p>
-          </div>
-
+        <Card variant="default" padding="lg" title="Sign in" subtitle="Enter your phone number and password to continue">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="identifier" className="block text-xs font-medium text-text-muted">
-                Phone Number
-              </label>
-              <input
-                id="identifier"
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
-                placeholder="+919876543210"
-                required
-              />
-            </div>
+            <Input
+              id="identifier"
+              type="text"
+              label="Phone Number"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="+919876543210"
+              required
+            />
 
-            <div className="space-y-1">
-              <label htmlFor="password" className="block text-xs font-medium text-text-muted">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <Input
+              id="password"
+              type="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
 
             {error && (
               <div className="rounded-md border border-status-error/30 bg-status-error/10 p-3 text-xs text-status-error">
@@ -83,29 +71,18 @@ export const LoginPage: React.FC = () => {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-background hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={isSubmitting}
             >
               {isSubmitting ? 'Signing in...' : 'Sign in'}
-            </button>
+            </Button>
           </form>
 
-          <div className="rounded-md border border-border bg-surface-raised p-3">
-            <p className="text-xs font-medium text-text-main mb-2">Demo Accounts</p>
-            <div className="space-y-1 text-xs text-text-muted">
-              <div className="flex justify-between"><span>Farmer:</span><span className="text-text-main">+919876543210</span></div>
-              <div className="flex justify-between"><span>FPO Manager:</span><span className="text-text-main">+919876543211</span></div>
-              <div className="flex justify-between"><span>Buyer:</span><span className="text-text-main">+919876543212</span></div>
-              <div className="flex justify-between"><span>Field Agent:</span><span className="text-text-main">+919876543213</span></div>
-              <div className="flex justify-between"><span>Admin:</span><span className="text-text-main">+919876543214</span></div>
-              <div className="mt-2 pt-2 border-t border-border text-text-muted">
-                Password for all accounts: <span className="text-text-main font-mono">demo-password</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

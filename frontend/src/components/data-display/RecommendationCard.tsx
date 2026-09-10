@@ -137,11 +137,11 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   }, [onAction]);
 
   const scoreBg =
-    score >= 76
+    score >= 75
       ? 'bg-status-success/20'
-      : score >= 51
+      : score >= 50
       ? 'bg-status-warning/20'
-      : 'bg-[#1E5A28]/20';
+      : 'bg-status-error/20';
 
   return (
     <div

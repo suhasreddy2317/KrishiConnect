@@ -658,7 +658,7 @@ export const BuyerPage: React.FC = () => {
     pending_review: { status: 'warning', label: 'Pending Review' },
     unverified: { status: 'pending-verification', label: 'Unverified' },
     escalated: { status: 'warning', label: 'Escalated' },
-    suspended: { status: 'completed', label: 'Suspended' },
+    suspended: { status: 'suspended', label: 'Suspended' },
   };
 
   const paymentFactor = getFactor('On-Time Payment');
@@ -901,14 +901,14 @@ export const BuyerPage: React.FC = () => {
     }
   };
 
-  const mapPaymentStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute' => {
-    const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute'> = {
+  const mapPaymentStatus = (status: string): 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute' | 'expired' | 'cancelled' | 'suspended' => {
+    const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'dispute' | 'expired' | 'cancelled' | 'suspended'> = {
       pending: 'pending-verification',
       initiated: 'active',
       processing: 'active',
       completed: 'completed',
       failed: 'dispute',
-      cancelled: 'warning',
+      cancelled: 'cancelled',
     };
     return map[status] || 'active';
   };
@@ -1339,11 +1339,11 @@ export const BuyerPage: React.FC = () => {
     { key: 'location', header: 'Delivery Location', align: 'left' as const },
     { key: 'requiredBy', header: 'Required By', align: 'left' as const },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: Demand) => {
-      const statusMap: Record<string, 'active' | 'completed' | 'warning'> = {
+      const statusMap: Record<string, 'active' | 'completed' | 'warning' | 'expired' | 'cancelled' | 'suspended'> = {
         active: 'active',
         fulfilled: 'completed',
         expired: 'warning',
-        cancelled: 'completed',
+        cancelled: 'cancelled',
       };
       return <StatusBadge status={statusMap[item.status.toLowerCase()] || 'active'} label={item.status} size="sm" />;
     }},
@@ -1371,13 +1371,13 @@ export const BuyerPage: React.FC = () => {
     { key: 'price', header: 'Price', align: 'right' as const, isNumeric: true },
     { key: 'quantity', header: 'Qty', align: 'center' as const },
     { key: 'status', header: 'Status', align: 'center' as const, render: (item: Offer) => {
-      const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification'> = {
+      const map: Record<string, 'active' | 'completed' | 'warning' | 'pending-verification' | 'expired' | 'cancelled' | 'suspended'> = {
         submitted: 'pending-verification',
         pending: 'pending-verification',
         countered: 'warning',
         accepted: 'active',
         rejected: 'completed',
-        expired: 'completed',
+        expired: 'expired',
       };
       return (
         <div className="flex items-center justify-center gap-1">
