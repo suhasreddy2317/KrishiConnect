@@ -191,7 +191,7 @@ export const HomePage: React.FC = () => {
             <img
               src="/krishiconnect-hero.png"
               alt=""
-              className="absolute inset-0 w-full h-full object-cover object-center"
+              className="absolute inset-0 w-full h-full object-cover object-right sm:object-center"
               aria-hidden="true"
             />
 
