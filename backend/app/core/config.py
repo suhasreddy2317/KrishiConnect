@@ -13,11 +13,13 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+
+    "https://krishiconnect-frontend-lt2f.onrender.com",
+]
     
     # Database - Default SQLite for local development, portable to PostgreSQL
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'krishiconnect.db'}"
