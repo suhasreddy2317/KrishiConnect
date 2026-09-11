@@ -13,6 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL } from '@/lib/api';
 
 interface NavItem {
   name: string;
@@ -38,7 +39,7 @@ export const AppLayout: React.FC = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/health');
+        const res = await fetch(`${API_BASE_URL}/health`);
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'healthy') {

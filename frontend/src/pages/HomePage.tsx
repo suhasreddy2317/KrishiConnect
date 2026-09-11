@@ -16,6 +16,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { API_BASE_URL } from '@/lib/api';
 
 const valueCards = [
   {
@@ -69,7 +70,7 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/health');
+        const res = await fetch(`${API_BASE_URL}/health`);
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'healthy') {

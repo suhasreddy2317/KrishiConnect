@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ROLE_CONFIGS, UserRole } from '@/config/navigation';
 import { useTextSize } from '@/context/TextSizeContext';
+import { API_BASE_URL } from '@/lib/api';
 import {
   Menu,
   X,
@@ -35,7 +36,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/health');
+        const res = await fetch(`${API_BASE_URL}/health`);
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'healthy') {
