@@ -224,6 +224,7 @@ export default {
       quantity: 'Quantity (kg)',
       quantityHelper: 'Total quantity available',
       quantityRequired: 'Quantity must be greater than 0',
+      quantityMinimum: 'Minimum lot quantity is 50 kg.',
       qualityGrade: 'Quality Grade',
       qualityGradeHelper: 'e.g. Grade A, Grade B',
       qualityGradeRequired: 'Quality grade is required',

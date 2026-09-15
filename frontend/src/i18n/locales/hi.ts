@@ -224,6 +224,7 @@ export default {
       quantity: 'मात्रा (किग्रा)',
       quantityHelper: 'कुल उपलब्ध मात्रा',
       quantityRequired: 'मात्रा 0 से अधिक होनी चाहिए',
+      quantityMinimum: 'न्यूनतम लॉट मात्रा 50 किग्रा है।',
       qualityGrade: 'गुणवत्ता ग्रेड',
       qualityGradeHelper: 'उदा. ग्रेड ए, ग्रेड बी',
       qualityGradeRequired: 'गुणवत्ता ग्रेड आवश्यक है',

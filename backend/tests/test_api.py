@@ -169,3 +169,69 @@ def test_create_lot_farmer_ignores_client_farmer_id():
         assert data["farmer_id"] == farmer1_id
     finally:
         db_session.close()
+
+
+def test_create_lot_minimum_quantity_49kg_rejected():
+    db_session = _Session()
+    try:
+        headers, farmer_id = _get_auth_headers(db_session)
+        lot_payload = {
+            "crop": "Wheat",
+            "quantity_kg": 49,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 422
+        assert "Minimum lot quantity is 50 kg" in response.json()["detail"]
+    finally:
+        db_session.close()
+
+
+def test_create_lot_minimum_quantity_49_9kg_rejected():
+    db_session = _Session()
+    try:
+        headers, farmer_id = _get_auth_headers(db_session)
+        lot_payload = {
+            "crop": "Wheat",
+            "quantity_kg": 49.9,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 422
+        assert "Minimum lot quantity is 50 kg" in response.json()["detail"]
+    finally:
+        db_session.close()
+
+
+def test_create_lot_minimum_quantity_50kg_accepted():
+    db_session = _Session()
+    try:
+        headers, farmer_id = _get_auth_headers(db_session)
+        lot_payload = {
+            "crop": "Wheat",
+            "quantity_kg": 50,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["quantity_kg"] == 50
+    finally:
+        db_session.close()
+
+
+def test_create_lot_minimum_quantity_100kg_accepted():
+    db_session = _Session()
+    try:
+        headers, farmer_id = _get_auth_headers(db_session)
+        lot_payload = {
+            "crop": "Wheat",
+            "quantity_kg": 100,
+            "quality_grade": "Grade A",
+        }
+        response = client.post("/api/lots/", json=lot_payload, headers=headers)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["quantity_kg"] == 100
+    finally:
+        db_session.close()

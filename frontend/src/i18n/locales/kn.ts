@@ -224,6 +224,7 @@ export default {
       quantity: 'ಪ್ರಮಾಣ (ಕಿಗ್ರಾ)',
       quantityHelper: 'ಒಟ್ಟು ಲಭ್ಯ ಪ್ರಮಾಣ',
       quantityRequired: 'ಪ್ರಮಾಣ 0 ಕ್ಕಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು',
+      quantityMinimum: 'ಕನಿಷ್ಟ ಲಾಟ್ ಪ್ರಮಾಣ 50 ಕಿಗ್ರಾ.',
       qualityGrade: 'ಗುಣಮಟ್ಟ ಗ್ರೇಡ್',
       qualityGradeHelper: 'ಉದಾ. ಗ್ರೇಡ್ A, ಗ್ರೇಡ್ B',
       qualityGradeRequired: 'ಗುಣಮಟ್ಟ ಗ್ರೇಡ್ ಅಗತ್ಯವಿದೆ',

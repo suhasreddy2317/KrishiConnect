@@ -27,6 +27,9 @@ def create_lot(
             raise HTTPException(status_code=404, detail="Farmer profile not found")
         farmer_id = farmer.id
 
+    if lot_data.quantity_kg < 50:
+        raise HTTPException(status_code=422, detail="Minimum lot quantity is 50 kg.")
+
     resolved_farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
     if not resolved_farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")

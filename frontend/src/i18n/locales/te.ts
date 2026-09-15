@@ -224,6 +224,7 @@ export default {
       quantity: 'పరిమాణం (కిగ్రా)',
       quantityHelper: 'మొత్తం అందుబాటులో ఉన్న పరిమాణం',
       quantityRequired: 'పరిమాణం 0 కంటే ఎక్కువ ఉండాలి',
+      quantityMinimum: 'కనీస లాట్ పరిమాణం 50 కిగ్రా.',
       qualityGrade: 'నాణ్యత గ్రేడ్',
       qualityGradeHelper: 'ఉదా. గ్రేడ్ A, గ్రేడ్ B',
       qualityGradeRequired: 'నాణ్యత గ్రేడ్ అవసరం',

@@ -369,7 +369,8 @@ export const FarmerPage: React.FC = () => {
     const errors: Record<string, string> = {};
 
     if (!lotCrop) errors.crop = t('farmerPage.lotForm.cropRequired');
-    if (!lotQuantity || parseFloat(lotQuantity) <= 0) errors.quantity = t('farmerPage.lotForm.quantityRequired');
+    if (!lotQuantity || isNaN(parseFloat(lotQuantity))) errors.quantity = t('farmerPage.lotForm.quantityRequired');
+    else if (parseFloat(lotQuantity) < 50) errors.quantity = t('farmerPage.lotForm.quantityMinimum');
     if (!lotQualityGrade.trim()) errors.qualityGrade = t('farmerPage.lotForm.qualityGradeRequired');
     if (lotMoisture && parseFloat(lotMoisture) < 0) errors.moisture = t('farmerPage.lotForm.moistureNegative');
     if (lotExpectedPrice && parseFloat(lotExpectedPrice) < 0) errors.expectedPrice = t('farmerPage.lotForm.priceNegative');
