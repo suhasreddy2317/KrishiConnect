@@ -78,7 +78,7 @@ _TRANSACTION_STATUS_ROLES: dict[TransactionStatus, dict[TransactionStatus, set[U
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.accepted: {
-        TransactionStatus.confirmed: {UserRole.buyer, UserRole.admin},
+        TransactionStatus.confirmed: {UserRole.buyer, UserRole.farmer, UserRole.admin},
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.confirmed: {

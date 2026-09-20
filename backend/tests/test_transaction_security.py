@@ -309,3 +309,44 @@ def test_lot_becomes_unavailable_after_transaction(data):
     )
     assert response.status_code == 400
     assert "Insufficient quantity available" in response.json()["detail"]
+
+
+def test_unrelated_farmer_cannot_confirm_another_farmers_transaction(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f1 = _login(FARMER1_USER_PHONE)
+    txn_id = txn["id"]
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()
+
+
+def test_farmer_can_confirm_own_accepted_transaction(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+    assert txn["status"] == "accepted"
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at confirmed: {response.text}"
+    assert response.json()["status"] == "confirmed"
+
+
+def test_farmer_cannot_jump_accepted_to_dispatched(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 409
