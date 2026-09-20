@@ -301,11 +301,11 @@ export const FieldAgentPage: React.FC = () => {
   };
 
   const handleViewLot = useCallback((lotId: number) => {
-    console.log('View lot:', lotId);
+    void lotId;
   }, []);
 
   const handleReviewDispute = useCallback((disputeId: number) => {
-    console.log('Review dispute:', disputeId);
+    void disputeId;
   }, []);
 
   const handleTaskRowClick = useCallback((item: Record<string, unknown>) => {

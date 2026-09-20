@@ -28,22 +28,22 @@ export const App: React.FC = () => {
             </Route>
             <Route path="/" element={<AppLayout />}>
               <Route path="farmer" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin', 'field_agent']}>
+                <ProtectedRoute allowedRoles={['farmer']}>
                   <FarmerPage />
                 </ProtectedRoute>
               } />
               <Route path="fpo" element={
-                <ProtectedRoute allowedRoles={['fpo_manager', 'admin', 'field_agent']}>
+                <ProtectedRoute allowedRoles={['fpo_manager']}>
                   <FpoPage />
                 </ProtectedRoute>
               } />
-              <Route path="buyer" element={
-                <ProtectedRoute allowedRoles={['buyer', 'admin', 'field_agent']}>
+              <Route path="buyer/*" element={
+                <ProtectedRoute allowedRoles={['buyer']}>
                   <BuyerPage />
                 </ProtectedRoute>
               } />
               <Route path="field-agent" element={
-                <ProtectedRoute allowedRoles={['field_agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['field_agent']}>
                   <FieldAgentPage />
                 </ProtectedRoute>
               } />

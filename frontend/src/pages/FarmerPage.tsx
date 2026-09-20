@@ -571,11 +571,11 @@ export const FarmerPage: React.FC = () => {
   };
 
   const getActionLabel = (verdict: string): string => {
-    const v = verdict.toUpperCase();
+    const v = verdict.toUpperCase().replace(/\s+/g, '_');
     if (v === 'SELL_NOW' || v === 'SELL_SOON' || v === 'REROUTE') {
       return t('recommendationCard.viewOffersAction');
     }
-    if (v === 'STORE') {
+    if (v === 'STORE' || v === 'WAIT') {
       return t('recommendationCard.viewMarketAction');
     }
     return t('recommendationCard.viewMarketAction');

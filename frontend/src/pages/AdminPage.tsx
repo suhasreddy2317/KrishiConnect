@@ -721,7 +721,7 @@ export const AdminPage: React.FC = () => {
   const renderUsersTab = () => {
     return (
       <div className="space-y-6">
-        <AlertBanner variant="info" title="No dedicated users endpoint" message="There is no /api/users/ endpoint in the current backend. The Users tab UI is preserved as a placeholder. Add an admin user list endpoint to connect this section." />
+        <AlertBanner variant="info" title="User management" message="User management features are being connected. Platform users will appear here once the user list endpoint is available." />
         <Section title="Users" description="Platform users and role management.">
           <Card variant="default" padding="none">
             {usersLoading ? (
@@ -756,7 +756,7 @@ export const AdminPage: React.FC = () => {
   const renderVerificationTab = () => {
     return (
       <div className="space-y-6">
-        <AlertBanner variant="info" title="Buyer Verification Queue" message="Showing all registered buyers. The backend exposes buyer data via GET /buyers/. There is no dedicated KYC workflow endpoint yet; status updates require a backend mutation API." />
+        <AlertBanner variant="info" title="Buyer Verification Queue" message="Showing all registered buyers. KYC status updates require a backend mutation API to be connected." />
         <Section title="Buyer Verification" description="KYC submissions awaiting admin review or escalation.">
           <Card variant="default" padding="none">
             {buyersLoading ? (
@@ -930,7 +930,7 @@ export const AdminPage: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <AlertBanner variant="info" title="Market Data" message="Price history is fetched from GET /api/market-prices/history. Select a commodity and market to view price records." />
+        <AlertBanner variant="info" title="Market Data" message="Price history requires selecting a commodity and market to view recent price benchmarks." />
         <Section title="Market Price History" description="Select a commodity and market to view recent price benchmarks.">
           <Card variant="default" padding="none">
             <div className="p-4 flex flex-wrap items-end gap-4">
@@ -997,7 +997,7 @@ export const AdminPage: React.FC = () => {
   const renderAuditLogsTab = () => {
     return (
       <div className="space-y-6">
-        <AlertBanner variant="success" title="Audit Log Connected" message="Audit records are fetched from GET /api/audit/. This endpoint is admin-only and returns an append-only ledger of platform actions." />
+        <AlertBanner variant="success" title="Audit Log Connected" message="Audit records are available for admin review. This endpoint returns an append-only ledger of platform actions." />
         <Section title="Audit Timeline" description="Append-only audit log of administrative and platform actions.">
           <Card variant="default" padding="none">
             {auditLoading ? (

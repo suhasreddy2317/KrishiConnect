@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -345,7 +346,21 @@ const mapBackendOffer = (backend: BackendOfferResponse, lotMap: Record<number, B
 
 export const BuyerPage: React.FC = () => {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('/buyer');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getActiveTab = (): string => {
+    const path = location.pathname;
+    const validTabs = ['/buyer', '/buyer/demand', '/buyer/lots', '/buyer/matches', '/buyer/offers', '/buyer/transactions', '/buyer/logistics', '/buyer/disputes'];
+    if (validTabs.includes(path)) return path;
+    return '/buyer';
+  };
+
+  const activeTab = getActiveTab();
+
+  const handleSelectSubTab = (path: string) => {
+    navigate(path);
+  };
 
   const [buyerId, setBuyerId] = useState<number | null>(null);
   const [confidenceLoading, setConfidenceLoading] = useState(false);
@@ -1517,7 +1532,7 @@ export const BuyerPage: React.FC = () => {
   ];
 
   return (
-    <AppShell forcedRole="buyer" activeSubTab={activeTab} onSelectSubTab={setActiveTab}>
+    <AppShell forcedRole="buyer" activeSubTab={activeTab} onSelectSubTab={handleSelectSubTab}>
       <MobileStack spacing="md">
         <PageHeader
           title="Buyer Procurement"
