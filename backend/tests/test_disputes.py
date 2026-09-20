@@ -202,7 +202,7 @@ def test_dispute_status_transitions(data):
     ).json()
     dispute_id = dispute["id"]
 
-    progression = ["under_review", "awaiting_evidence", "escalated", "resolved"]
+    progression = ["under_review", "awaiting_evidence", "escalated"]
     for status in progression:
         response = client.patch(
             f"/api/disputes/{dispute_id}/status",
@@ -211,6 +211,15 @@ def test_dispute_status_transitions(data):
         )
         assert response.status_code == 200, f"Failed at {status}: {response.text}"
         assert response.json()["status"] == status
+
+    token_admin = _login(ADMIN_USER_PHONE)
+    response = client.patch(
+        f"/api/disputes/{dispute_id}/status",
+        json={"status": "resolved", "resolution_notes": "Resolved."},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200, f"Failed at resolved: {response.text}"
+    assert response.json()["status"] == "resolved"
 
 
 def test_dispute_invalid_transition(data):
@@ -232,7 +241,7 @@ def test_dispute_invalid_transition(data):
         json={"status": "resolved"},
         headers={"Authorization": f"Bearer {token_f2}"},
     )
-    assert response.status_code == 409
+    assert response.status_code == 403
 
 
 def test_dispute_evidence_creation_and_listing(data):
@@ -318,28 +327,29 @@ def test_dispute_resolution(data):
         json={"status": "escalated"},
         headers={"Authorization": f"Bearer {token_f2}"},
     )
+    token_admin = _login(ADMIN_USER_PHONE)
     resolved = client.patch(
         f"/api/disputes/{dispute_id}/status",
         json={"status": "resolved", "resolution_notes": "Compensation agreed."},
-        headers={"Authorization": f"Bearer {token_f2}"},
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert resolved.status_code == 200
     body = resolved.json()
     assert body["status"] == "resolved"
     assert body["resolution_notes"] == "Compensation agreed."
-    assert body["resolved_by_user_id"] == data.f2u.id
+    assert body["resolved_by_user_id"] == data.admin_u.id
     assert body["resolved_at"] is not None
 
 
 def test_audit_records_created(data):
     offer_id, txn = _create_accepted_offer(data, data.demand_soy.id, data.lot_soy.id, 6000, 45.0, FARMER2_USER_PHONE, data.f2u)
-    token_f2 = _login(FARMER2_USER_PHONE)
+    token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
     client.patch(
         f"/api/transactions/{txn_id}/status",
         json={"status": "confirmed"},
-        headers={"Authorization": f"Bearer {token_f2}"},
+        headers={"Authorization": f"Bearer {token_b}"},
     )
 
     token_admin = _login(ADMIN_USER_PHONE)
@@ -353,7 +363,7 @@ def test_audit_records_created(data):
 
 def test_audit_log_append_only(data):
     offer_id, txn = _create_accepted_offer(data, data.demand_soy.id, data.lot_soy.id, 6000, 45.0, FARMER2_USER_PHONE, data.f2u)
-    token_f2 = _login(FARMER2_USER_PHONE)
+    token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
     token_admin = _login(ADMIN_USER_PHONE)
@@ -363,7 +373,7 @@ def test_audit_log_append_only(data):
     client.patch(
         f"/api/transactions/{txn_id}/status",
         json={"status": "confirmed"},
-        headers={"Authorization": f"Bearer {token_f2}"},
+        headers={"Authorization": f"Bearer {token_b}"},
     )
 
     second = client.get("/api/audit/", headers={"Authorization": f"Bearer {token_admin}"}).json()

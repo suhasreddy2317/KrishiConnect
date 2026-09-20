@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 TEST_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "test.db")
 TEST_DATABASE_URL = f"sqlite:///{TEST_DB_PATH}"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
 
 from app.core.config import settings
 from app.db.session import Base

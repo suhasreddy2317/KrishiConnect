@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.enums import TransactionStatus, UserRole
 from app.models.farmer import Farmer
+from app.models.offer import Offer
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.transaction import (
@@ -60,6 +61,18 @@ def create_transaction_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.buyer, UserRole.farmer, UserRole.admin)),
 ):
+    offer = db.get(Offer, payload.offer_id)
+    if offer is None:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if current_user.role == UserRole.buyer:
+        from app.models.buyer import Buyer
+        buyer = db.query(Buyer).filter(Buyer.user_id == current_user.id).first()
+        if not buyer or offer.buyer_id != buyer.id:
+            raise HTTPException(status_code=403, detail="Not authorized to create transaction for this offer")
+    elif current_user.role == UserRole.farmer:
+        raise HTTPException(status_code=403, detail="Farmers cannot create transactions directly")
+
     try:
         transaction = create_transaction(
             db,
@@ -119,7 +132,13 @@ def update_transaction_status_endpoint(
     if payload.status is None:
         raise HTTPException(status_code=400, detail="status is required")
     try:
-        transaction = update_transaction_status(db, transaction_id, payload.status, actor_user_id=current_user.id)
+        transaction = update_transaction_status(
+            db,
+            transaction_id=transaction_id,
+            next_status=payload.status,
+            actor_user_id=current_user.id,
+            actor_role=current_user.role,
+        )
     except TransactionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
     return transaction

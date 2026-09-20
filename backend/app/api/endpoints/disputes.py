@@ -66,7 +66,20 @@ def list_disputes(
     )),
 ):
     disputes = get_disputes(db, transaction_id=transaction_id)
-    items = [DisputeResponse.model_validate(d) for d in disputes]
+    items = []
+    for d in disputes:
+        transaction = db.get(Transaction, d.transaction_id)
+        if current_user.role in (UserRole.fpo_manager, UserRole.field_agent, UserRole.admin):
+            items.append(DisputeResponse.model_validate(d))
+        elif current_user.role == UserRole.farmer:
+            farmer = _user_farmer(db, current_user)
+            if farmer and transaction and transaction.farmer_id == farmer.id:
+                items.append(DisputeResponse.model_validate(d))
+        elif current_user.role == UserRole.buyer:
+            from app.models.buyer import Buyer
+            buyer = db.query(Buyer).filter(Buyer.user_id == current_user.id).first()
+            if buyer and transaction and transaction.buyer_id == buyer.id:
+                items.append(DisputeResponse.model_validate(d))
     return DisputeListResponse(items=items, total=len(items))
 
 
@@ -102,6 +115,7 @@ def update_dispute_status_endpoint(
             dispute_id=dispute_id,
             next_status=payload.status,
             actor_user_id=current_user.id,
+            actor_role=current_user.role,
             resolution_notes=payload.resolution_notes,
         )
     except DisputeError as exc:

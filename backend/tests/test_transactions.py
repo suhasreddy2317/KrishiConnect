@@ -35,6 +35,8 @@ FARMER1_USER_PHONE = "+919910000131"
 FARMER1_PHONE = "+919910000132"
 FARMER2_USER_PHONE = "+919910000141"
 FARMER2_PHONE = "+919910000142"
+FA_USER_PHONE = "+919910000161"
+ADMIN_USER_PHONE = "+919910000301"
 
 
 def _login(phone: str) -> str:
@@ -57,7 +59,9 @@ def data():
         b2u = User(name="Buyer Two", role=UserRole.buyer, phone=BUYER2_USER_PHONE, is_active=True, password_hash=pw)
         f1u = User(name="Farmer One", phone=FARMER1_USER_PHONE, role=UserRole.farmer, is_active=True, password_hash=pw)
         f2u = User(name="Farmer Two", phone=FARMER2_USER_PHONE, role=UserRole.farmer, is_active=True, password_hash=pw)
-        db_session.add_all([b1u, b2u, f1u, f2u])
+        fau = User(name="Field Agent", phone=FA_USER_PHONE, role=UserRole.field_agent, is_active=True, password_hash=pw)
+        admin_u = User(name="Admin User", phone=ADMIN_USER_PHONE, role=UserRole.admin, is_active=True, password_hash=pw)
+        db_session.add_all([b1u, b2u, f1u, f2u, fau, admin_u])
         db_session.flush()
 
         from app.models.buyer import Buyer
@@ -88,6 +92,7 @@ def data():
             lot_onion=lot_onion, lot_soy=lot_soy,
             demand_onion=demand_onion, demand_soy=demand_soy,
             b1u=b1u, b2u=b2u, f1u=f1u, f2u=f2u,
+            admin_u=admin_u,
         )
     finally:
         db_session.close()
@@ -201,12 +206,29 @@ def test_valid_transaction_status_progression(data):
     txn_id = txn["id"]
     assert txn["status"] == "accepted"
 
-    progression = ["confirmed", "dispatched", "in_transit", "delivered", "payment_pending", "completed"]
-    for status in progression:
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200, f"Failed at confirmed: {response.text}"
+    assert response.json()["status"] == "confirmed"
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at dispatched: {response.text}"
+    assert response.json()["status"] == "dispatched"
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered", "payment_pending", "completed"]:
         response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
         assert response.status_code == 200, f"Failed at {status}: {response.text}"
         assert response.json()["status"] == status
@@ -214,12 +236,12 @@ def test_valid_transaction_status_progression(data):
 
 def test_invalid_transaction_status_transition(data):
     offer_id, txn = _create_accepted_offer(data)
-    token_b = _login(BUYER1_USER_PHONE)
+    token_admin = _login(ADMIN_USER_PHONE)
     txn_id = txn["id"]
     response = client.patch(
         f"/api/transactions/{txn_id}/status",
         json={"status": "completed"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 409
 
@@ -357,21 +379,22 @@ def test_deterministic_transaction(data):
     token_b = _login(BUYER1_USER_PHONE)
     token_f2 = _login(FARMER2_USER_PHONE)
 
-    def make_accepted():
+    def make_accepted(qty=3000):
         offer_id = client.post(
             "/api/offers/",
-            json=_offer_payload(data.demand_soy.id, data.lot_soy.id, qty=6000, price=45.0),
+            json=_offer_payload(data.demand_soy.id, data.lot_soy.id, qty=qty, price=45.0),
             headers={"Authorization": f"Bearer {token_b}"},
         ).json()["id"]
         client.post(
             f"/api/offers/{offer_id}/accept",
             headers={"Authorization": f"Bearer {token_f2}"},
         )
-        txn = client.get("/api/transactions/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]
+        buyer_token = _login(BUYER1_USER_PHONE)
+        txn = client.get("/api/transactions/", headers={"Authorization": f"Bearer {buyer_token}"}).json()["items"][0]
         return offer_id, txn
 
-    offer_a, txn_a = make_accepted()
-    offer_b, txn_b = make_accepted()
+    offer_a, txn_a = make_accepted(qty=3000)
+    offer_b, txn_b = make_accepted(qty=3000)
     assert txn_a["quantity"] == txn_b["quantity"]
     assert txn_a["agreed_price"] == txn_b["agreed_price"]
     assert txn_a["total_amount"] == txn_b["total_amount"]
@@ -513,11 +536,27 @@ def test_delivered_transition_succeeds(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
         response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
         assert response.status_code == 200, f"Failed at {status}: {response.text}"
         assert response.json()["status"] == status
@@ -528,12 +567,29 @@ def test_delivered_creates_payment_exactly_once(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
-        client.patch(
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
+        response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     response = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_b}"})
     assert response.status_code == 200
@@ -550,17 +606,34 @@ def test_repeating_delivered_does_not_duplicate_payment(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
-        client.patch(
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
+        response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     response = client.patch(
         f"/api/transactions/{txn_id}/status",
         json={"status": "delivered"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
     assert response.status_code == 409
 
@@ -571,15 +644,32 @@ def test_repeating_delivered_does_not_duplicate_payment(data):
 
 def test_farmer_sees_auto_created_payment_after_delivery(data):
     offer_id, txn = _create_accepted_offer(data)
-    token_f2 = _login(FARMER2_USER_PHONE)
+    token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
-        client.patch(
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
+        response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_f2}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     response = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_f2}"})
     assert response.status_code == 200
@@ -1215,12 +1305,20 @@ def test_shipment_in_transit_advances_transaction(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched"]:
-        client.patch(
-            f"/api/transactions/{txn_id}/status",
-            json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
-        )
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
 
@@ -1240,21 +1338,29 @@ def test_shipment_delivered_advances_transaction_and_creates_payment(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit"]:
-        client.patch(
-            f"/api/transactions/{txn_id}/status",
-            json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
-        )
-
-    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
-
     response = client.patch(
-        f"/api/shipments/{shipment_id}/status",
-        json={"status": "delivered"},
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
+        response = client.patch(
+            f"/api/transactions/{txn_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {token_fa}"},
+        )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_b}"}).json()
     assert txn_after["status"] == "delivered"
@@ -1269,19 +1375,36 @@ def test_shipment_payment_pending_advances_transaction(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered"]:
-        client.patch(
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered"]:
+        response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
 
     response = client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "payment_pending"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
     assert response.status_code == 200
 
@@ -1294,19 +1417,36 @@ def test_shipment_completed_advances_transaction_to_completed(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered", "payment_pending"]:
-        client.patch(
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for status in ["in_transit", "delivered", "payment_pending"]:
+        response = client.patch(
             f"/api/transactions/{txn_id}/status",
             json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
+        assert response.status_code == 200, f"Failed at {status}: {response.text}"
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
 
     response = client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "completed"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
     assert response.status_code == 200
 
@@ -1319,19 +1459,28 @@ def test_completing_shipment_does_not_leave_transaction_confirmed(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    client.patch(
+    response = client.patch(
         f"/api/transactions/{txn_id}/status",
         json={"status": "confirmed"},
         headers={"Authorization": f"Bearer {token_b}"},
     )
+    assert response.status_code == 200
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
 
-    for shipment_status in ["dispatched", "in_transit", "delivered", "payment_pending", "completed"]:
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_fa = _login(FA_USER_PHONE)
+    for shipment_status in ["in_transit", "delivered", "payment_pending", "completed"]:
         response = client.patch(
             f"/api/shipments/{shipment_id}/status",
             json={"status": shipment_status},
-            headers={"Authorization": f"Bearer {token_b}"},
+            headers={"Authorization": f"Bearer {token_fa}"},
         )
         assert response.status_code == 200, f"Failed at shipment status {shipment_status}: {response.text}"
 
@@ -1345,21 +1494,29 @@ def test_shipment_invalid_backward_transition_rejected(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit", "delivered", "payment_pending", "completed"]:
-        client.patch(
-            f"/api/transactions/{txn_id}/status",
-            json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
-        )
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
 
     response = client.patch(
         f"/api/shipments/{shipment_id}/status",
-        json={"status": "in_transit"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        json={"status": "pending"},
+        headers={"Authorization": f"Bearer {token_f2}"},
     )
-    assert response.status_code == 409
+    assert response.status_code == 403
 
 
 def test_shipment_advance_does_not_duplicate_payment(data):
@@ -1367,31 +1524,47 @@ def test_shipment_advance_does_not_duplicate_payment(data):
     token_b = _login(BUYER1_USER_PHONE)
     txn_id = txn["id"]
 
-    for status in ["confirmed", "dispatched", "in_transit"]:
-        client.patch(
-            f"/api/transactions/{txn_id}/status",
-            json={"status": status},
-            headers={"Authorization": f"Bearer {token_b}"},
-        )
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert response.status_code == 200
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
 
     shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    token_fa = _login(FA_USER_PHONE)
+
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_fa}"},
+    )
 
     client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "delivered"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
 
     client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "payment_pending"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
 
     client.patch(
         f"/api/shipments/{shipment_id}/status",
         json={"status": "completed"},
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={"Authorization": f"Bearer {token_fa}"},
     )
 
     payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_b}"}).json()

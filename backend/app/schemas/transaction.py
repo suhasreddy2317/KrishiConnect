@@ -16,8 +16,11 @@ class TransactionBase(BaseModel):
     status: TransactionStatus = TransactionStatus.accepted
 
 
-class TransactionCreate(TransactionBase):
-    pass
+class TransactionCreate(BaseModel):
+    offer_id: int
+    quantity: float
+    agreed_price: float
+    total_amount: float
 
 
 class TransactionUpdate(BaseModel):

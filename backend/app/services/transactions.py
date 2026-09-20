@@ -6,10 +6,11 @@ once the transaction is created. Status progression is enforced strictly.
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.models.demand import Demand
-from app.models.enums import TransactionStatus, UserRole
+from app.models.enums import TransactionStatus, UserRole, LotStatus
 from app.models.offer import Offer
 from app.models.produce_lot import ProduceLot
 from app.models.transaction import Transaction
@@ -71,6 +72,123 @@ _SHIPMENT_STATUS_ORDER: dict[str, int] = {
 }
 
 
+_TRANSACTION_STATUS_ROLES: dict[TransactionStatus, dict[TransactionStatus, set[UserRole]]] = {
+    TransactionStatus.pending: {
+        TransactionStatus.accepted: {UserRole.buyer, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.accepted: {
+        TransactionStatus.confirmed: {UserRole.buyer, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.confirmed: {
+        TransactionStatus.dispatched: {UserRole.farmer, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.dispatched: {
+        TransactionStatus.in_transit: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.in_transit: {
+        TransactionStatus.delivered: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.delivered: {
+        TransactionStatus.payment_pending: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.payment_pending: {
+        TransactionStatus.completed: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    TransactionStatus.disputed: {
+        TransactionStatus.accepted: {UserRole.admin, UserRole.fpo_manager},
+    },
+    TransactionStatus.completed: {},
+}
+
+
+_SHIPMENT_STATUS_ROLES: dict[str, dict[str, set[UserRole]]] = {
+    "pending": {
+        "dispatched": {UserRole.buyer, UserRole.farmer, UserRole.admin},
+        "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    "dispatched": {
+        "in_transit": {UserRole.buyer, UserRole.farmer, UserRole.field_agent, UserRole.admin},
+        "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    "in_transit": {
+        "delivered": {UserRole.field_agent, UserRole.admin},
+        "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    "delivered": {
+        "payment_pending": {UserRole.field_agent, UserRole.admin},
+        "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    "payment_pending": {
+        "completed": {UserRole.field_agent, UserRole.admin},
+        "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
+    },
+    "completed": {},
+}
+
+
+_PAYMENT_STATUS_ROLES: dict[str, set[UserRole]] = {
+    "pending": {UserRole.buyer, UserRole.admin},
+    "initiated": {UserRole.buyer, UserRole.admin},
+    "confirmed": {UserRole.admin},
+    "completed": {UserRole.admin},
+    "failed": {UserRole.admin},
+    "refunded": {UserRole.admin},
+}
+
+
+def _assert_authorized_status_transition(
+    current_status: TransactionStatus,
+    next_status: TransactionStatus,
+    actor_role: Optional[UserRole],
+) -> None:
+    if actor_role is None:
+        return
+    allowed = _TRANSACTION_STATUS_ROLES.get(current_status, {})
+    role_allowed = allowed.get(next_status, set())
+    if actor_role not in role_allowed:
+        raise TransactionError(
+            f"Role '{actor_role.value}' is not authorized to transition from '{current_status.value}' to '{next_status.value}'",
+            status_code=403,
+        )
+
+
+def _assert_authorized_shipment_status_transition(
+    current_status: str,
+    next_status: str,
+    actor_role: Optional[UserRole],
+) -> None:
+    if actor_role is None:
+        return
+    allowed = _SHIPMENT_STATUS_ROLES.get(current_status, {})
+    role_allowed = allowed.get(next_status, set())
+    if actor_role not in role_allowed:
+        raise TransactionError(
+            f"Role '{actor_role.value}' is not authorized to transition shipment from '{current_status}' to '{next_status}'",
+            status_code=403,
+        )
+
+
+def _assert_authorized_payment_status(
+    next_status: str,
+    actor_role: Optional[UserRole],
+) -> None:
+    if actor_role is None:
+        return
+    allowed = _PAYMENT_STATUS_ROLES.get(next_status, set())
+    if actor_role not in allowed:
+        raise TransactionError(
+            f"Role '{actor_role.value}' is not authorized to set payment status to '{next_status}'",
+            status_code=403,
+        )
+
+
 def _assert_valid_transition(current: TransactionStatus, next_status: TransactionStatus) -> None:
     allowed = VALID_TRANSITIONS.get(current, set())
     if next_status not in allowed:
@@ -123,6 +241,31 @@ def create_transaction(
         total_amount=total_amount,
         status=TransactionStatus.accepted,
     )
+
+    lot = db.execute(
+        select(ProduceLot).where(ProduceLot.id == transaction.lot_id).with_for_update()
+    ).scalar_one()
+
+    if lot.status in (LotStatus.sold.value, LotStatus.archived.value):
+        raise TransactionError("Lot is no longer available", status_code=400)
+
+    total_committed = db.query(func.sum(Transaction.quantity)).filter(
+        Transaction.lot_id == lot.id,
+        Transaction.status.in_([
+            TransactionStatus.pending,
+            TransactionStatus.accepted,
+            TransactionStatus.confirmed,
+            TransactionStatus.dispatched,
+            TransactionStatus.in_transit,
+        ])
+    ).scalar() or 0
+
+    if total_committed + quantity > lot.quantity_kg:
+        raise TransactionError(
+            f"Insufficient quantity available. Requested: {quantity}, Available: {lot.quantity_kg - total_committed}",
+            status_code=400,
+        )
+
     db.add(transaction)
     db.commit()
     db.refresh(transaction)
@@ -145,12 +288,14 @@ def update_transaction_status(
     transaction_id: int,
     next_status: TransactionStatus,
     actor_user_id: Optional[int] = None,
+    actor_role: Optional[UserRole] = None,
 ) -> Transaction:
     transaction = db.get(Transaction, transaction_id)
     if transaction is None:
         raise TransactionError("Transaction not found", status_code=404)
 
     _assert_valid_transition(transaction.status, next_status)
+    _assert_authorized_status_transition(transaction.status, next_status, actor_role)
 
     previous_status = transaction.status
     transaction.status = next_status
@@ -184,6 +329,24 @@ def update_transaction_status(
             db.commit()
     if next_status == TransactionStatus.completed:
         transaction.completed_at = datetime.utcnow()
+
+    shipment_status = _transaction_status_to_shipment_status(next_status)
+    if shipment_status:
+        existing_shipment = db.query(Shipment).filter(Shipment.transaction_id == transaction.id).first()
+        if existing_shipment and existing_shipment.status != shipment_status:
+            previous_shipment_status = existing_shipment.status
+            existing_shipment.status = shipment_status
+            db.commit()
+            db.refresh(existing_shipment)
+            record_audit(
+                db,
+                action="shipment.status.updated",
+                entity_type="shipment",
+                entity_id=existing_shipment.id,
+                actor_user_id=actor_user_id,
+                details=f"status {previous_shipment_status} -> {shipment_status}",
+            )
+            db.commit()
 
     db.commit()
     db.refresh(transaction)
@@ -276,10 +439,13 @@ def update_shipment_status(
     actual_pickup: Optional[datetime] = None,
     actual_delivery: Optional[datetime] = None,
     actor_user_id: Optional[int] = None,
+    actor_role: Optional[UserRole] = None,
 ) -> Shipment:
     shipment = db.get(Shipment, shipment_id)
     if shipment is None:
         raise TransactionError("Shipment not found", status_code=404)
+
+    _assert_authorized_shipment_status_transition(shipment.status, status, actor_role)
 
     previous_status = shipment.status
     shipment.status = status
@@ -365,10 +531,13 @@ def update_payment_status(
     reference: Optional[str] = None,
     confirmed_at: Optional[datetime] = None,
     actor_user_id: Optional[int] = None,
+    actor_role: Optional[UserRole] = None,
 ) -> Payment:
     payment = db.get(Payment, payment_id)
     if payment is None:
         raise TransactionError("Payment not found", status_code=404)
+
+    _assert_authorized_payment_status(status, actor_role)
 
     previous_status = payment.status
     payment.status = status

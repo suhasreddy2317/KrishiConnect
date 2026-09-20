@@ -75,6 +75,20 @@ def create_payment_endpoint(
         UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin
     )),
 ):
+    transaction = db.get(Transaction, payload.transaction_id)
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    if current_user.role == UserRole.buyer:
+        from app.models.buyer import Buyer
+        buyer = db.query(Buyer).filter(Buyer.user_id == current_user.id).first()
+        if not buyer or transaction.buyer_id != buyer.id:
+            raise HTTPException(status_code=403, detail="Not authorized to create payment for this transaction")
+    elif current_user.role == UserRole.farmer:
+        farmer = _user_farmer(db, current_user)
+        if not farmer or transaction.farmer_id != farmer.id:
+            raise HTTPException(status_code=403, detail="Not authorized to create payment for this transaction")
+
     try:
         payment = create_payment(
             db,
@@ -127,6 +141,7 @@ def update_payment_status_endpoint(
             reference=payload.reference,
             confirmed_at=payload.confirmed_at,
             actor_user_id=current_user.id,
+            actor_role=current_user.role,
         )
     except TransactionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)

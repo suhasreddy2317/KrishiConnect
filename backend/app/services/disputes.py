@@ -131,11 +131,15 @@ def update_dispute_status(
     dispute_id: int,
     next_status: DisputeStatus,
     actor_user_id: Optional[int] = None,
+    actor_role: Optional[UserRole] = None,
     resolution_notes: Optional[str] = None,
 ) -> Dispute:
     dispute = db.get(Dispute, dispute_id)
     if dispute is None:
         raise DisputeError("Dispute not found", status_code=404)
+
+    if next_status == DisputeStatus.resolved and actor_role not in {UserRole.admin, UserRole.fpo_manager}:
+        raise DisputeError("Only admin or FPO manager can resolve a dispute", status_code=403)
 
     _assert_valid_dispute_transition(dispute.status, next_status)
 

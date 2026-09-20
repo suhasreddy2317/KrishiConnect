@@ -26,6 +26,8 @@ def create_lot(
         if not farmer:
             raise HTTPException(status_code=404, detail="Farmer profile not found")
         farmer_id = farmer.id
+    elif current_user.role not in (UserRole.fpo_manager, UserRole.admin):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to create lots")
 
     if lot_data.quantity_kg < 50:
         raise HTTPException(status_code=422, detail="Minimum lot quantity is 50 kg.")
@@ -54,7 +56,15 @@ def get_lots(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(ProduceLot).all()
+    query = db.query(ProduceLot)
+    if current_user.role == UserRole.buyer:
+        query = query.filter(ProduceLot.status == LotStatus.published.value)
+    elif current_user.role == UserRole.farmer:
+        farmer = db.query(Farmer).filter(Farmer.user_id == current_user.id).first()
+        if not farmer:
+            return []
+        query = query.filter(ProduceLot.farmer_id == farmer.id)
+    return query.all()
 
 
 @router.get("/{lot_id}", response_model=ProduceLotResponse)
@@ -75,4 +85,14 @@ def get_lot(
             detail="Produce lot not found",
         )
 
-    return lot
+    if lot.status == LotStatus.published.value:
+        return lot
+
+    if current_user.role in (UserRole.admin, UserRole.fpo_manager, UserRole.field_agent):
+        return lot
+
+    farmer = db.query(Farmer).filter(Farmer.user_id == current_user.id).first()
+    if farmer and lot.farmer_id == farmer.id:
+        return lot
+
+    raise HTTPException(status_code=403, detail="Not authorized to view this lot")
