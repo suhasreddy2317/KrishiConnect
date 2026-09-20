@@ -90,7 +90,7 @@ _TRANSACTION_STATUS_ROLES: dict[TransactionStatus, dict[TransactionStatus, set[U
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.in_transit: {
-        TransactionStatus.delivered: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.delivered: {UserRole.field_agent, UserRole.admin, UserRole.farmer},
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.delivered: {
@@ -118,7 +118,7 @@ _SHIPMENT_STATUS_ROLES: dict[str, dict[str, set[UserRole]]] = {
         "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     "in_transit": {
-        "delivered": {UserRole.field_agent, UserRole.admin},
+        "delivered": {UserRole.field_agent, UserRole.admin, UserRole.farmer},
         "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     "delivered": {

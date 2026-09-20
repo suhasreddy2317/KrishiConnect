@@ -192,3 +192,67 @@ def test_field_agent_can_mark_shipment_delivered(data):
     )
     assert response.status_code == 200
     assert response.json()["status"] == "delivered"
+
+
+def test_farmer_can_mark_own_in_transit_shipment_delivered(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    token_f2 = _login(FARMER2_USER_PHONE)
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at delivered: {response.text}"
+    assert response.json()["status"] == "delivered"
+
+
+def test_unrelated_farmer_cannot_mark_another_farmers_shipment_delivered(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    token_f2 = _login(FARMER2_USER_PHONE)
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    token_f1 = _login(FARMER1_USER_PHONE)
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()
