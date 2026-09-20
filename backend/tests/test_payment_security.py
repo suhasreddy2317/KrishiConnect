@@ -170,3 +170,47 @@ def test_buyer_cannot_set_payment_completed(data):
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert response.status_code == 403
+
+
+def test_farmer_can_set_own_payment_processing(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    token_b = _login(BUYER1_USER_PHONE)
+    payment = client.post(
+        "/api/payments/",
+        json={"transaction_id": txn_id, "amount": 2700.0},
+        headers={"Authorization": f"Bearer {token_b}"},
+    ).json()
+    payment_id = payment["id"]
+
+    response = client.patch(
+        f"/api/payments/{payment_id}/status",
+        json={"status": "processing"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at processing: {response.text}"
+    assert response.json()["status"] == "processing"
+
+
+def test_unrelated_farmer_cannot_set_another_farmers_payment_processing(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    payment = client.post(
+        "/api/payments/",
+        json={"transaction_id": txn_id, "amount": 2700.0},
+        headers={"Authorization": f"Bearer {token_b}"},
+    ).json()
+    payment_id = payment["id"]
+
+    token_f1 = _login(FARMER1_USER_PHONE)
+    response = client.patch(
+        f"/api/payments/{payment_id}/status",
+        json={"status": "processing"},
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()

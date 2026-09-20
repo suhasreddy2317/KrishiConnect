@@ -94,7 +94,7 @@ _TRANSACTION_STATUS_ROLES: dict[TransactionStatus, dict[TransactionStatus, set[U
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.delivered: {
-        TransactionStatus.payment_pending: {UserRole.field_agent, UserRole.admin},
+        TransactionStatus.payment_pending: {UserRole.field_agent, UserRole.admin, UserRole.farmer},
         TransactionStatus.disputed: {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     TransactionStatus.payment_pending: {
@@ -122,7 +122,7 @@ _SHIPMENT_STATUS_ROLES: dict[str, dict[str, set[UserRole]]] = {
         "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     "delivered": {
-        "payment_pending": {UserRole.field_agent, UserRole.admin},
+        "payment_pending": {UserRole.field_agent, UserRole.admin, UserRole.farmer},
         "disputed": {UserRole.buyer, UserRole.farmer, UserRole.fpo_manager, UserRole.field_agent, UserRole.admin},
     },
     "payment_pending": {
@@ -136,6 +136,7 @@ _SHIPMENT_STATUS_ROLES: dict[str, dict[str, set[UserRole]]] = {
 _PAYMENT_STATUS_ROLES: dict[str, set[UserRole]] = {
     "pending": {UserRole.buyer, UserRole.admin},
     "initiated": {UserRole.buyer, UserRole.admin},
+    "processing": {UserRole.buyer, UserRole.admin, UserRole.farmer},
     "confirmed": {UserRole.admin},
     "completed": {UserRole.admin},
     "failed": {UserRole.admin},

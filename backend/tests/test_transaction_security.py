@@ -457,3 +457,126 @@ def test_farmer_cannot_jump_dispatched_to_delivered(data):
         headers={"Authorization": f"Bearer {token_f2}"},
     )
     assert response.status_code == 409
+
+
+def test_farmer_can_mark_own_delivered_transaction_payment_pending(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000302", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000302", "password": DEMO_PASS}).json()["access_token"]
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at payment_pending: {response.text}"
+    assert response.json()["status"] == "payment_pending"
+
+
+def test_unrelated_farmer_cannot_mark_another_farmers_delivered_transaction_payment_pending(data):
+    offer_id, txn = _create_accepted_offer(data)
+    txn_id = txn["id"]
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000303", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000303", "password": DEMO_PASS}).json()["access_token"]
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    token_f1 = _login(FARMER1_USER_PHONE)
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()
+
+
+def test_farmer_cannot_jump_delivered_to_completed(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000304", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000304", "password": DEMO_PASS}).json()["access_token"]
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "completed"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 409

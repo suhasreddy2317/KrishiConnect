@@ -256,3 +256,99 @@ def test_unrelated_farmer_cannot_mark_another_farmers_shipment_delivered(data):
     )
     assert response.status_code == 403
     assert "not authorized" in response.json()["detail"].lower()
+
+
+def test_farmer_can_mark_own_delivered_shipment_payment_pending(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    token_f2 = _login(FARMER2_USER_PHONE)
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    FA_PHONE = "+919910000517"
+    FA_PASS = "fapass2"
+    pw = hash_password(FA_PASS)
+    fa_user = User(name="Field Agent 2", phone=FA_PHONE, role=UserRole.field_agent, is_active=True, password_hash=pw)
+    data.db.add(fa_user)
+    data.db.commit()
+
+    token_fa = client.post("/api/auth/login", json={"identifier": FA_PHONE, "password": FA_PASS}).json()["access_token"]
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_fa}"},
+    )
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_fa}"},
+    )
+
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at payment_pending: {response.text}"
+    assert response.json()["status"] == "payment_pending"
+
+
+def test_unrelated_farmer_cannot_mark_another_farmers_delivered_shipment_payment_pending(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_b = _login(BUYER1_USER_PHONE)
+    txn_id = txn["id"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    token_f2 = _login(FARMER2_USER_PHONE)
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+
+    shipment_id = client.get("/api/shipments/", headers={"Authorization": f"Bearer {token_b}"}).json()["items"][0]["id"]
+
+    FA_PHONE = "+919910000518"
+    FA_PASS = "fapass3"
+    pw = hash_password(FA_PASS)
+    fa_user = User(name="Field Agent 3", phone=FA_PHONE, role=UserRole.field_agent, is_active=True, password_hash=pw)
+    data.db.add(fa_user)
+    data.db.commit()
+
+    token_fa = client.post("/api/auth/login", json={"identifier": FA_PHONE, "password": FA_PASS}).json()["access_token"]
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_fa}"},
+    )
+    client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {token_fa}"},
+    )
+
+    token_f1 = _login(FARMER1_USER_PHONE)
+    response = client.patch(
+        f"/api/shipments/{shipment_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()
+    assert "not authorized" in response.json()["detail"].lower()
