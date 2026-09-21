@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -31,6 +32,7 @@ import {
   Package,
   ClipboardList,
   AlertTriangle,
+  Home,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -155,6 +157,7 @@ interface AuditLogListResponse {
 
 export const AdminPage: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('/admin');
 
   const [lotsLoading, setLotsLoading] = useState(false);
@@ -192,6 +195,7 @@ export const AdminPage: React.FC = () => {
   const [marketHistory, setMarketHistory] = useState<MarketHistoryItem[]>([]);
   const [marketHistoryLoading, setMarketHistoryLoading] = useState(false);
   const [marketHistoryError, setMarketHistoryError] = useState<string | null>(null);
+  const [marketDataTouched, setMarketDataTouched] = useState(false);
 
   interface MarketHistoryItem {
     date: string;
@@ -263,17 +267,17 @@ export const AdminPage: React.FC = () => {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [health, setHealth] = useState<AdminHealthResponse | null>(null);
 
-  const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: '/admin', label: 'Dashboard' },
-    { id: '/admin/users', label: 'Users' },
-    { id: '/admin/verification', label: 'Verification', count: buyers.filter(b => b.status === 'unverified').length || undefined },
-    { id: '/admin/lots', label: 'Lots', count: lots.length || undefined },
-    { id: '/admin/transactions', label: 'Transactions', count: transactions?.items.length || undefined },
-    { id: '/admin/disputes', label: 'Disputes', count: disputes?.items.length || undefined },
-    { id: '/admin/market-data', label: 'Market Data' },
-    { id: '/admin/audit-logs', label: 'Audit Logs', count: auditLogs?.items.length || undefined },
-    { id: '/admin/system-health', label: 'System' },
-  ];
+  const tabs = useMemo(() => [
+    { id: '/admin' as TabId, label: 'Dashboard', icon: <Home className="w-4 h-4" /> },
+    { id: '/admin/users' as TabId, label: 'Users', icon: <Users className="w-4 h-4" /> },
+    { id: '/admin/verification' as TabId, label: 'Verification', icon: <FileCheck className="w-4 h-4" />, count: buyers.filter(b => b.status === 'unverified').length || undefined },
+    { id: '/admin/lots' as TabId, label: 'Lots', icon: <Package className="w-4 h-4" />, count: lots.length || undefined },
+    { id: '/admin/transactions' as TabId, label: 'Transactions', icon: <Scale className="w-4 h-4" />, count: transactions?.items.length || undefined },
+    { id: '/admin/disputes' as TabId, label: 'Disputes', icon: <AlertTriangle className="w-4 h-4" />, count: disputes?.items.length || undefined },
+    { id: '/admin/market-data' as TabId, label: 'Market Data', icon: <LineChart className="w-4 h-4" /> },
+    { id: '/admin/audit-logs' as TabId, label: 'Audit Logs', icon: <ClipboardList className="w-4 h-4" />, count: auditLogs?.items.length || undefined },
+    { id: '/admin/system-health' as TabId, label: 'System', icon: <Activity className="w-4 h-4" /> },
+  ], [buyers, lots, transactions, disputes, auditLogs]);
 
   useEffect(() => {
     if (!token) return;
@@ -293,6 +297,12 @@ export const AdminPage: React.FC = () => {
       fetchMarketHistory();
     }
   }, [selectedCommodityId, selectedMarketId]);
+
+  useEffect(() => {
+    if (activeTab !== '/admin/market-data') {
+      setMarketDataTouched(false);
+    }
+  }, [activeTab]);
 
   const fetchLots = async () => {
     if (!token) return;
@@ -416,7 +426,12 @@ export const AdminPage: React.FC = () => {
   };
 
   const fetchMarketHistory = async () => {
-    if (!token || !selectedCommodityId || !selectedMarketId) return;
+    if (!token) return;
+    if (!selectedCommodityId || !selectedMarketId) {
+      setMarketDataTouched(true);
+      return;
+    }
+    setMarketDataTouched(false);
     setMarketHistoryLoading(true);
     setMarketHistoryError(null);
     try {
@@ -937,24 +952,24 @@ export const AdminPage: React.FC = () => {
               <Select
                 label="Commodity"
                 helperText="Required"
-                error={selectedCommodityId ? undefined : 'Select a commodity'}
+                error={marketDataTouched && !selectedCommodityId ? 'Select a commodity' : undefined}
                 options={[
                   { value: '', label: 'Select commodity...', disabled: true },
                   ...activeCommodities.map(c => ({ value: String(c.id), label: `${c.name}${c.variety ? ` (${c.variety})` : ''}` })),
                 ]}
                 value={selectedCommodityId ? String(selectedCommodityId) : ''}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCommodityId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSelectedCommodityId(e.target.value ? Number(e.target.value) : null); setMarketDataTouched(false); }}
               />
               <Select
                 label="Market"
                 helperText="Required"
-                error={selectedMarketId ? undefined : 'Select a market'}
+                error={marketDataTouched && !selectedMarketId ? 'Select a market' : undefined}
                 options={[
                   { value: '', label: 'Select market...', disabled: true },
                   ...activeMarkets.map(m => ({ value: String(m.id), label: `${m.name}${m.location ? `, ${m.location}` : ''}` })),
                 ]}
                 value={selectedMarketId ? String(selectedMarketId) : ''}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMarketId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSelectedMarketId(e.target.value ? Number(e.target.value) : null); setMarketDataTouched(false); }}
               />
               <Button variant="secondary" size="sm" leftIcon={<Activity className="w-3.5 h-3.5" />} onClick={fetchMarketHistory} disabled={!selectedCommodityId || !selectedMarketId || marketHistoryLoading}>
                 Refresh
@@ -1130,15 +1145,21 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <AppShell forcedRole="admin" activeSubTab={activeTab} onSelectSubTab={(path) => setActiveTab(path as TabId)}>
-      <MobileStack spacing="md">
+    <AppShell forcedRole="admin" activeSubTab={activeTab} onSelectSubTab={(path) => {
+      if (path === '/admin/profile') {
+        navigate(path);
+      } else {
+        setActiveTab(path as TabId);
+      }
+    }}>
+      <MobileStack spacing="md" className="max-w-none">
         <PageHeader
           title="Admin & Governance"
           subtitle="Platform oversight, verification queues, and operational health monitoring."
           roleBadge={<StatusBadge status="verified-buyer" label="Admin" size="sm" />}
           statusBadge={<SyncStatus state="Synced" lastSyncedTime="1m ago" />}
           primaryAction={
-            <Button variant="primary" size="md" leftIcon={<ShieldCheck className="w-4 h-4" />}>
+            <Button variant="primary" size="md" leftIcon={<ShieldCheck className="w-4 h-4" />} onClick={() => setActiveTab('/admin/audit-logs')}>
               Audit Action
             </Button>
           }

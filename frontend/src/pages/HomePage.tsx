@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import {
   Users,
@@ -16,42 +16,8 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
 import { API_BASE_URL } from '@/lib/api';
-
-const valueCards = [
-  {
-    icon: Users,
-    title: '5 Connected Roles',
-    description: 'Farmers, Buyers, FPOs, Field Agents & Admins working together in one platform.',
-    color: '#16A34A',
-    bg: '#F0FDF4',
-    border: '#BBF7D0',
-  },
-  {
-    icon: Brain,
-    title: 'Explainable Decisions',
-    description: 'AI-driven insights using market prices, demand, storage and quality signals.',
-    color: '#7C3AED',
-    bg: '#F5F3FF',
-    border: '#DDD6FE',
-  },
-  {
-    icon: Handshake,
-    title: 'Verified Market Links',
-    description: 'Connect with trusted buyers, compare offers and negotiate with confidence.',
-    color: '#D97706',
-    bg: '#FFFBEB',
-    border: '#FDE68A',
-  },
-  {
-    icon: Truck,
-    title: 'End-to-End Tracking',
-    description: 'Track lots, logistics, payments and delivery from farm to market.',
-    color: '#2563EB',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-  },
-];
 
 const navItems = [
   { name: 'Overview', path: '/' },
@@ -66,6 +32,47 @@ export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+
+  const valueCards = useMemo(
+    () => [
+      {
+        icon: Users,
+        title: '5 Connected Roles',
+        description: 'Farmers, Buyers, FPOs, Field Agents & Admins working together in one platform.',
+        color: '#16A34A',
+        bg: '#F0FDF4',
+        border: '#BBF7D0',
+      },
+      {
+        icon: Brain,
+        title: 'Explainable Decisions',
+        description: 'AI-driven insights using market prices, demand, storage and quality signals.',
+        color: '#7C3AED',
+        bg: '#F5F3FF',
+        border: '#DDD6FE',
+      },
+      {
+        icon: Handshake,
+        title: 'Verified Market Links',
+        description: 'Connect with trusted buyers, compare offers and negotiate with confidence.',
+        color: '#D97706',
+        bg: '#FFFBEB',
+        border: '#FDE68A',
+      },
+      {
+        icon: Truck,
+        title: 'End-to-End Tracking',
+        description: 'Track lots, logistics, payments and delivery from farm to market.',
+        color: '#2563EB',
+        bg: '#EFF6FF',
+        border: '#BFDBFE',
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -269,7 +276,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* About KrishiConnect */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <section id="about" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ scrollMarginTop: '4rem' }}>
         <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
           <div className="flex-1 space-y-4">
             <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
@@ -311,13 +318,123 @@ export const HomePage: React.FC = () => {
             <span>© 2026 KrishiConnect. All rights reserved.</span>
           </div>
           <div className="flex items-center space-x-6">
-            <NavLink to="/" className="hover:text-text-main transition-colors">About</NavLink>
-            <NavLink to="/" className="hover:text-text-main transition-colors">Contact</NavLink>
-            <NavLink to="/" className="hover:text-text-main transition-colors">Privacy</NavLink>
-            <NavLink to="/" className="hover:text-text-main transition-colors">Terms</NavLink>
+            <a
+              href="#about"
+              onClick={(e) => {
+                const el = document.getElementById('about');
+                if (el) {
+                  e.preventDefault();
+                  el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="text-text-muted hover:text-text-main transition-colors"
+            >
+              About
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsContactOpen(true)}
+              className="text-text-muted hover:text-text-main transition-colors"
+            >
+              Contact
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPrivacyOpen(true)}
+              className="text-text-muted hover:text-text-main transition-colors"
+            >
+              Privacy
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTermsOpen(true)}
+              className="text-text-muted hover:text-text-main transition-colors"
+            >
+              Terms
+            </button>
           </div>
         </div>
       </footer>
+
+      <Dialog
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+        title="Contact KrishiConnect"
+        description="Agricultural Market Intelligence & Trading Platform"
+        maxWidth="sm"
+        footer={
+          <Button variant="ghost" onClick={() => setIsContactOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <div className="text-sm font-semibold text-text-main">KrishiConnect</div>
+            <div className="text-xs text-text-muted">Agricultural Market Intelligence & Trading Platform</div>
+          </div>
+          <div className="space-y-2">
+            <div>
+              <div className="text-xs text-text-muted">Email</div>
+              <div className="text-sm text-text-main font-mono">support@krishiconnect.example</div>
+            </div>
+            <div>
+              <div className="text-xs text-text-muted">Phone</div>
+              <div className="text-sm text-text-main font-mono">+91 XXXXX XXXXX</div>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+        title="KrishiConnect Privacy Notice"
+        description="Demo / project usage notice"
+        maxWidth="md"
+        footer={
+          <Button variant="ghost" onClick={() => setIsPrivacyOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-3 text-sm text-text-main leading-relaxed">
+          <p>
+            KrishiConnect is a demo agricultural trading platform. Platform usage information is collected only to provide core functionality such as recommendations, matching, and workflow tracking.
+          </p>
+          <p>
+            Sensitive credentials and authentication tokens are not displayed publicly in shared or partner views. Personal contact details are shared only as needed for verified transactions between platform participants.
+          </p>
+          <p>
+            This demo does not implement a full privacy or data-request system. For real deployments, a complete privacy policy and data-handling procedure should be defined before production use.
+          </p>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+        title="KrishiConnect Demo Terms"
+        description="Basic platform / demo usage terms"
+        maxWidth="md"
+        footer={
+          <Button variant="ghost" onClick={() => setIsTermsOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-3 text-sm text-text-main leading-relaxed">
+          <p>
+            This KrishiConnect instance is provided for demonstration and evaluation purposes. The platform, data, recommendations, and transaction flows are illustrative and may not reflect real market outcomes.
+          </p>
+          <p>
+            Users are responsible for verifying market decisions independently before acting on platform outputs. The platform operators are not liable for trading losses or decisions made based on demo data.
+          </p>
+          <p>
+            Access and usage must comply with applicable laws and platform rules. Unauthorized access, data scraping, or interference with platform services is prohibited.
+          </p>
+        </div>
+      </Dialog>
     </div>
   );
 };

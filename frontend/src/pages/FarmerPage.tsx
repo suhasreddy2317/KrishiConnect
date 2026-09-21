@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -17,7 +18,7 @@ import { Card } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { Drawer } from '@/components/ui/Drawer';
 import { Dialog } from '@/components/ui/Dialog';
-import { Plus, HelpCircle, Truck, Wallet, AlertTriangle, Package, Clock, CheckCircle2 } from 'lucide-react';
+import { Plus, HelpCircle, Truck, Wallet, AlertTriangle, Package, Clock, CheckCircle2, Home, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -152,6 +153,7 @@ interface BackendDispute {
 
 export const FarmerPage: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak, hasVoiceFor } = useTextToSpeech();
 
@@ -244,16 +246,16 @@ export const FarmerPage: React.FC = () => {
     [setActiveTab]
   );
 
-  const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: '/farmer', label: t('dashboard.decisionHome') },
-    { id: '/farmer/market', label: t('dashboard.nearbyMandis') },
-    { id: '/farmer/lots', label: t('dashboard.myLots'), count: lots.length || undefined },
-    { id: '/farmer/offers', label: t('dashboard.offers'), count: offers.length || undefined },
-    { id: '/farmer/transactions', label: t('dashboard.transactions'), count: transactions.length || undefined },
-    { id: '/farmer/shipments', label: t('dashboard.shipments'), count: shipments.length || undefined },
-    { id: '/farmer/payments', label: t('dashboard.payments'), count: payments.length || undefined },
-    { id: '/farmer/disputes', label: t('dashboard.disputes'), count: disputes.length || undefined },
-  ];
+  const tabs = useMemo(() => [
+    { id: '/farmer' as TabId, label: t('dashboard.decisionHome'), icon: <Home className="w-4 h-4" /> },
+    { id: '/farmer/market' as TabId, label: t('dashboard.nearbyMandis'), icon: <TrendingUp className="w-4 h-4" /> },
+    { id: '/farmer/lots' as TabId, label: t('dashboard.myLots'), icon: <Package className="w-4 h-4" />, count: lots.length || undefined },
+    { id: '/farmer/offers' as TabId, label: t('dashboard.offers'), icon: <Clock className="w-4 h-4" />, count: offers.length || undefined },
+    { id: '/farmer/transactions' as TabId, label: t('dashboard.transactions'), icon: <CheckCircle2 className="w-4 h-4" />, count: transactions.length || undefined },
+    { id: '/farmer/shipments' as TabId, label: t('dashboard.shipments'), icon: <Truck className="w-4 h-4" />, count: shipments.length || undefined },
+    { id: '/farmer/payments' as TabId, label: t('dashboard.payments'), icon: <Wallet className="w-4 h-4" />, count: payments.length || undefined },
+    { id: '/farmer/disputes' as TabId, label: t('dashboard.disputes'), icon: <AlertTriangle className="w-4 h-4" />, count: disputes.length || undefined },
+  ], [t, lots.length, offers.length, transactions.length, shipments.length, payments.length, disputes.length]);
 
   useEffect(() => {
     if (!token) return;
@@ -1053,7 +1055,14 @@ export const FarmerPage: React.FC = () => {
   };
 
   return (
-    <AppShell forcedRole="farmer" activeSubTab={activeTab} onSelectSubTab={(path) => { setSelectedLotId(null); setActiveTab(path as TabId); }}>
+    <AppShell forcedRole="farmer" activeSubTab={activeTab} onSelectSubTab={(path) => {
+      if (path === '/farmer/profile') {
+        navigate(path);
+      } else {
+        setSelectedLotId(null);
+        setActiveTab(path as TabId);
+      }
+    }}>
       <MobileStack spacing="md">
         <PageHeader
           title={t('farmerPage.pageTitle')}

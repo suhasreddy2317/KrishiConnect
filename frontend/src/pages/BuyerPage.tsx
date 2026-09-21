@@ -22,7 +22,7 @@ import { ScoreBar } from '@/components/data-display/ScoreBar';
 import { LoadingState } from '@/components/data-display/LoadingState';
 import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
-import { Building2, Send, ShieldCheck, Activity, Search, FileText, AlertCircle, Truck, Wallet, Scale } from 'lucide-react';
+import { Building2, Send, ShieldCheck, Activity, Search, FileText, AlertCircle, Truck, Wallet, Scale, Users } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
@@ -381,6 +381,8 @@ export const BuyerPage: React.FC = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [pendingPayload, setPendingPayload] = useState<any>(null);
+  const [selectedContact, setSelectedContact] = useState<{name: string; role: string; crop: string; time: string; status: string; statusType: 'active' | 'pending-verification' | 'completed'; phone: string; email: string} | null>(null);
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
 
   const [formCommodityId, setFormCommodityId] = useState('');
   const [formQuantity, setFormQuantity] = useState('');
@@ -1679,6 +1681,36 @@ export const BuyerPage: React.FC = () => {
                   </div>
                 )}
               </Card>
+
+              <Card variant="raised" padding="md" className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-semibold text-text-main">Last Contact</h3>
+                </div>
+                <div className="space-y-3 text-xs">
+                  {[
+                    { name: 'Ramesh Patil', role: 'Farmer', crop: 'Red Onion', time: '2 hours ago', status: 'Responded', statusType: 'active' as const, phone: '+91 98765 43210', email: 'ramesh.patil@example.com' },
+                    { name: 'Sunita Jadhav', role: 'FPO Manager', crop: 'Soybean', time: '1 day ago', status: 'Pending', statusType: 'pending-verification' as const, phone: '+91 87654 32109', email: 'sunita.jadhav@example.com' },
+                    { name: 'Arun Kulkarni', role: 'Farmer', crop: 'Wheat', time: '3 days ago', status: 'Delivered', statusType: 'completed' as const, phone: '+91 76543 21098', email: 'arun.kulkarni@example.com' },
+                  ].map((contact, idx) => (
+                    <button key={idx} type="button" onClick={() => { setSelectedContact(contact); setIsContactDialogOpen(true); }} className="w-full flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border hover:border-accent/40 transition-colors text-left">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-md bg-surface-raised border border-border flex items-center justify-center text-text-muted shrink-0">
+                          <Users className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-text-main font-medium truncate">{contact.name}</div>
+                          <div className="text-text-muted">{contact.role} · {contact.crop}</div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <StatusBadge status={contact.statusType} label={contact.status} size="sm" />
+                        <div className="text-text-muted mt-0.5">{contact.time}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </Card>
             </div>
           </div>
 
@@ -2753,6 +2785,44 @@ export const BuyerPage: React.FC = () => {
         <div className="text-xs text-text-muted">
           Please verify the details before confirming. This action will create a new offer visible to the seller.
         </div>
+      </Dialog>
+
+      <Dialog isOpen={isContactDialogOpen} onClose={() => setIsContactDialogOpen(false)} title={selectedContact ? `Contact — ${selectedContact.name}` : 'Contact Details'} description={selectedContact ? `${selectedContact.role} · ${selectedContact.crop}` : 'Contact information'} maxWidth="sm" footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="ghost" onClick={() => setIsContactDialogOpen(false)}>Close</Button>
+        </div>
+      }>
+        {selectedContact && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-lg bg-surface-raised border border-border flex items-center justify-center text-text-muted">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-text-main">{selectedContact.name}</div>
+                <div className="text-xs text-text-muted">{selectedContact.role} · {selectedContact.crop}</div>
+              </div>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border">
+                <span className="text-text-muted">Phone</span>
+                <span className="text-text-main font-mono">{selectedContact.phone}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border">
+                <span className="text-text-muted">Email</span>
+                <span className="text-text-main font-mono">{selectedContact.email}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border">
+                <span className="text-text-muted">Last Contact</span>
+                <span className="text-text-main">{selectedContact.time}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border">
+                <span className="text-text-muted">Status</span>
+                <StatusBadge status={selectedContact.statusType} label={selectedContact.status} size="sm" />
+              </div>
+            </div>
+          </div>
+        )}
       </Dialog>
     </AppShell>
   );

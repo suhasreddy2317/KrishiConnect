@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -164,6 +165,7 @@ const mapPaymentStatus = (status: string): 'active' | 'completed' | 'warning' | 
 
 export const FpoPage: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('/fpo');
 
   const [lotsLoading, setLotsLoading] = useState(false);
@@ -325,7 +327,13 @@ export const FpoPage: React.FC = () => {
   ];
 
   return (
-    <AppShell forcedRole="fpo" activeSubTab={activeTab} onSelectSubTab={setActiveTab}>
+    <AppShell forcedRole="fpo" activeSubTab={activeTab} onSelectSubTab={(path) => {
+      if (path === '/fpo/profile') {
+        navigate(path);
+      } else {
+        setActiveTab(path);
+      }
+    }}>
       <MobileStack spacing="md">
         <PageHeader
           title="FPO Manager Hub"

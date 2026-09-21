@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -150,6 +151,7 @@ const mapDisputeStatus = (status: string): 'active' | 'completed' | 'warning' | 
 
 export const FieldAgentPage: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('/field-agent');
 
   const [lots, setLots] = useState<BackendLot[]>([]);
@@ -171,6 +173,7 @@ export const FieldAgentPage: React.FC = () => {
   const [farmerErrors, setFarmerErrors] = useState<Record<string, string>>({});
   const [isSubmittingFarmer, setIsSubmittingFarmer] = useState(false);
   const [farmerSubmitError, setFarmerSubmitError] = useState<string | null>(null);
+  const [tasksRefreshMessage, setTasksRefreshMessage] = useState<string | null>(null);
 
   const fetchLots = async () => {
     if (!token) return;
@@ -218,6 +221,13 @@ export const FieldAgentPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load offers', err);
     }
+  };
+
+  const handleRefreshTasks = async () => {
+    await fetchLots();
+    await fetchDisputes();
+    setTasksRefreshMessage('Tasks refreshed successfully.');
+    setTimeout(() => setTasksRefreshMessage(null), 3000);
   };
 
   useEffect(() => {
@@ -375,8 +385,14 @@ export const FieldAgentPage: React.FC = () => {
   ];
 
   return (
-    <AppShell forcedRole="field-agent" activeSubTab={activeTab} onSelectSubTab={setActiveTab}>
-      <MobileStack spacing="md">
+    <AppShell forcedRole="field-agent" activeSubTab={activeTab} onSelectSubTab={(path) => {
+      if (path === '/field-agent/profile') {
+        navigate(path);
+      } else {
+        setActiveTab(path);
+      }
+    }}>
+      <MobileStack spacing="md" className="max-w-none">
         <PageHeader
           title="Field Agent Workspace"
           subtitle="In-field farmer onboarding, produce verification, lot grading, and dispute mediation support."
@@ -438,9 +454,14 @@ export const FieldAgentPage: React.FC = () => {
               title="Pending Actions"
               description="Items requiring immediate field-agent attention, derived from lots, disputes, and transactions."
               action={
-                <Button variant="ghost" size="sm" onClick={() => { fetchLots(); fetchDisputes(); }}>Refresh</Button>
+                <Button variant="ghost" size="sm" onClick={handleRefreshTasks}>Refresh</Button>
               }
             >
+              {tasksRefreshMessage && (
+                <div className="px-4 py-2 bg-status-success/10 border-b border-status-success/20 text-xs text-status-success font-medium">
+                  {tasksRefreshMessage}
+                </div>
+              )}
               <Card variant="default" padding="none">
                 {taskItems.length === 0 ? (
                   <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title="All clear" description="No pending actions — lots and disputes are in good standing." />
@@ -580,13 +601,13 @@ export const FieldAgentPage: React.FC = () => {
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
                   Add Farmer
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/lots')}>
                   Capture Evidence
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/tasks')}>
                   Review Task
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/disputes')}>
                   Report Issue
                 </Button>
               </div>
@@ -664,9 +685,14 @@ export const FieldAgentPage: React.FC = () => {
               title="Pending Actions"
               description="Items requiring immediate field-agent attention, derived from lots, disputes, and transactions."
               action={
-                <Button variant="ghost" size="sm" onClick={() => { fetchLots(); fetchDisputes(); }}>Refresh</Button>
+                <Button variant="ghost" size="sm" onClick={handleRefreshTasks}>Refresh</Button>
               }
             >
+              {tasksRefreshMessage && (
+                <div className="px-4 py-2 bg-status-success/10 border-b border-status-success/20 text-xs text-status-success font-medium">
+                  {tasksRefreshMessage}
+                </div>
+              )}
               <Card variant="default" padding="none">
                 {taskItems.length === 0 ? (
                   <EmptyState icon={<CheckCircle2 className="w-6 h-6" />} title="All clear" description="No pending actions — lots and disputes are in good standing." />
@@ -758,13 +784,13 @@ export const FieldAgentPage: React.FC = () => {
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
                   Add Farmer
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/lots')}>
                   Capture Evidence
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/tasks')}>
                   Review Task
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/disputes')}>
                   Report Issue
                 </Button>
               </div>

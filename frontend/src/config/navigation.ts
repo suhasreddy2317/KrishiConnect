@@ -119,6 +119,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       { name: 'Offers', path: '/fpo/offers', icon: Coins },
       { name: 'Transactions', path: '/fpo/transactions', icon: CheckCircle },
       { name: 'Analytics', path: '/fpo/analytics', icon: BarChart3 },
+      { name: 'Profile', path: '/fpo/profile', icon: User },
     ],
   },
   buyer: {
@@ -148,6 +149,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       { name: 'Transactions', path: '/buyer/transactions', icon: CheckCircle },
       { name: 'Logistics', path: '/buyer/logistics', icon: Truck },
       { name: 'Disputes', path: '/buyer/disputes', icon: AlertTriangle },
+      { name: 'Profile', path: '/buyer/profile', icon: User },
     ],
   },
   'field-agent': {
@@ -175,6 +177,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       { name: 'Tasks', path: '/field-agent/tasks', icon: CheckSquare },
       { name: 'Disputes', path: '/field-agent/disputes', icon: AlertTriangle },
       { name: 'Activity', path: '/field-agent/activity', icon: History },
+      { name: 'Profile', path: '/field-agent/profile', icon: User },
     ],
   },
   admin: {
@@ -205,6 +208,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       { name: 'Market Data', path: '/admin/market-data', icon: LineChart },
       { name: 'Audit Logs', path: '/admin/audit-logs', icon: FileText },
       { name: 'System Health', path: '/admin/system-health', icon: Activity },
+      { name: 'Profile', path: '/admin/profile', icon: User },
     ],
   },
 };
