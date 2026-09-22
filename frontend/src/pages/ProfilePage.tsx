@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -66,6 +67,7 @@ const BACKEND_TO_FRONTEND_ROLE: Record<string, UserRole> = {
 
 export const ProfilePage: React.FC = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
   const [farmerProfile, setFarmerProfile] = useState<BackendFarmer | null>(null);
   const [buyerProfile, setBuyerProfile] = useState<BackendBuyer | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -165,8 +167,15 @@ export const ProfilePage: React.FC = () => {
   else if (user.role === 'field_agent') detailFields = agentFields;
   else detailFields = adminFields;
 
+  const handleSelectSubTab = (path: string) => {
+    if (path === profilePath) {
+      return;
+    }
+    navigate(path);
+  };
+
   return (
-    <AppShell forcedRole={frontendRole} activeSubTab={profilePath}>
+    <AppShell forcedRole={frontendRole} activeSubTab={profilePath} onSelectSubTab={handleSelectSubTab}>
       <MobileStack spacing="md">
         <PageHeader
           title="Profile"

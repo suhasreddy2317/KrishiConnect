@@ -48,14 +48,14 @@ export const App: React.FC = () => {
                   <ProfilePage />
                 </ProtectedRoute>
               } />
-              <Route path="buyer/*" element={
-                <ProtectedRoute allowedRoles={['buyer']}>
-                  <BuyerPage />
-                </ProtectedRoute>
-              } />
               <Route path="buyer/profile" element={
                 <ProtectedRoute allowedRoles={['buyer']}>
                   <ProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="buyer/*" element={
+                <ProtectedRoute allowedRoles={['buyer']}>
+                  <BuyerPage />
                 </ProtectedRoute>
               } />
               <Route path="field-agent" element={
