@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -167,7 +167,16 @@ export const FarmerPage: React.FC = () => {
     };
     return map[crop] || crop;
   };
-  const [activeTab, setActiveTab] = useState<TabId>('/farmer');
+  const location = useLocation();
+
+  const getActiveTab = (): TabId => {
+    const path = location.pathname as TabId;
+    const validTabs: TabId[] = ['/farmer', '/farmer/market', '/farmer/lots', '/farmer/offers', '/farmer/transactions', '/farmer/shipments', '/farmer/payments', '/farmer/disputes'];
+    if (validTabs.includes(path)) return path;
+    return '/farmer';
+  };
+
+  const activeTab = getActiveTab();
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [isLotDrawerOpen, setIsLotDrawerOpen] = useState(false);
   const [lotCrop, setLotCrop] = useState('');
@@ -241,9 +250,9 @@ export const FarmerPage: React.FC = () => {
         payments: '/farmer/payments',
       };
       const tab = map[intent];
-      if (tab) setActiveTab(tab);
+      if (tab) navigate(tab);
     },
-    [setActiveTab]
+    [navigate]
   );
 
   const tabs = useMemo(() => [
@@ -586,8 +595,8 @@ export const FarmerPage: React.FC = () => {
   const handlePrimaryAction = useCallback(() => {
     if (!recommendation) return;
     const tab = getVerdictTab(recommendation.verdict);
-    setActiveTab(tab);
-  }, [recommendation]);
+    navigate(tab);
+  }, [recommendation, navigate]);
 
   const handleRecommendationAction = useCallback(
     (_intent: 'sell' | 'store' | 'wait', _actionHint: string | null) => {
@@ -858,7 +867,7 @@ export const FarmerPage: React.FC = () => {
               <h3 className="text-base font-semibold text-text-main">{t('farmerPage.nearbyMandiBenchmarks')}</h3>
               <p className="text-xs text-text-muted">{t('farmerPage.comparingPrices')}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('/farmer/market')}>{t('farmerPage.viewAllMandis')}</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/farmer/market')}>{t('farmerPage.viewAllMandis')}</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MarketCard mandiName="Lasalgaon APMC" distanceKm={18} commodity="Red Onion" modalPrice={2450} trendPercentage={4.8} timestamp="12m ago" isBestRealized onSelectMandi={() => {}} />
@@ -896,7 +905,7 @@ export const FarmerPage: React.FC = () => {
           <Card key={lot.id} variant="default" title={lot.crop} subtitle={`${lot.quantity_kg} ${lot.unit} • Grade ${lot.quality_grade}`} headerAction={<StatusBadge status="grade" label={lot.quality_grade} size="sm" />}>
             <div className="flex items-center justify-between">
               <div className="text-xs text-text-muted font-mono">Lot ID: #{lot.id} • Status: {lot.status} {lot.harvest_date ? `• Harvest: ${lot.harvest_date}` : ''} {lot.location ? `• ${lot.location}` : ''}</div>
-              <Button size="sm" variant="outline" onClick={() => { setSelectedLotId(lot.id); setActiveTab('/farmer/offers'); }}>{t('farmerPage.lots.viewOffers')}</Button>
+                <Button size="sm" variant="outline" onClick={() => { setSelectedLotId(lot.id); navigate('/farmer/offers'); }}>{t('farmerPage.lots.viewOffers')}</Button>
             </div>
           </Card>
         ))}
@@ -938,7 +947,7 @@ export const FarmerPage: React.FC = () => {
                   <Button size="sm" variant="destructive" onClick={() => handleRejectOffer(offer)}>{t('farmerPage.offers.reject')}</Button>
                 </>
               )}
-              {offer.status === 'accepted' && <Button size="sm" variant="ghost" onClick={() => setActiveTab('/farmer/transactions')}>{t('farmerPage.offers.viewTransaction')}</Button>}
+              {offer.status === 'accepted' && <Button size="sm" variant="ghost" onClick={() => navigate('/farmer/transactions')}>{t('farmerPage.offers.viewTransaction')}</Button>}
             </div>
           </div>
         ))}
@@ -1060,7 +1069,7 @@ export const FarmerPage: React.FC = () => {
         navigate(path);
       } else {
         setSelectedLotId(null);
-        setActiveTab(path as TabId);
+        navigate(path);
       }
     }}>
       <MobileStack spacing="md">
@@ -1076,7 +1085,7 @@ export const FarmerPage: React.FC = () => {
           }
         />
 
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => { setSelectedLotId(null); setActiveTab(id as TabId); }} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => { setSelectedLotId(null); navigate(id as string); }} />
 
         {activeTab === '/farmer' && renderDecisionHome()}
         {activeTab === '/farmer/market' && renderMarketTab()}

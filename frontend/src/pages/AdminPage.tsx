@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -158,7 +158,16 @@ interface AuditLogListResponse {
 export const AdminPage: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabId>('/admin');
+  const location = useLocation();
+
+  const getActiveTab = (): TabId => {
+    const path = location.pathname as TabId;
+    const validTabs: TabId[] = ['/admin', '/admin/users', '/admin/verification', '/admin/lots', '/admin/transactions', '/admin/disputes', '/admin/market-data', '/admin/audit-logs', '/admin/system-health'];
+    if (validTabs.includes(path)) return path;
+    return '/admin';
+  };
+
+  const activeTab = getActiveTab();
 
   const [lotsLoading, setLotsLoading] = useState(false);
   const [lotsError, setLotsError] = useState<string | null>(null);
@@ -504,7 +513,7 @@ export const AdminPage: React.FC = () => {
               title="Buyer Verification Queue"
               description="KYC submissions awaiting admin review."
               action={
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('/admin/verification')}>Review All</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/verification')}>Review All</Button>
               }
             >
               <Card variant="default" padding="none">
@@ -543,7 +552,7 @@ export const AdminPage: React.FC = () => {
               title="Active Lot Oversight"
               description="Platform lots requiring governance attention."
               action={
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('/admin/lots')}>Inspect Lots</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/lots')}>Inspect Lots</Button>
               }
             >
               <Card variant="default" padding="none">
@@ -584,7 +593,7 @@ export const AdminPage: React.FC = () => {
               title="Disputes"
               description="Open and escalated disputes requiring mediation."
               action={
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('/admin/disputes')}>Review Disputes</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/disputes')}>Review Disputes</Button>
               }
             >
               <Card variant="default" padding="none">
@@ -684,12 +693,12 @@ export const AdminPage: React.FC = () => {
 
             <Card variant="default" padding="md" title="Quick Governance Actions">
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<FileCheck className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/verification')}>Review Buyers</Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Scale className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/disputes')}>Review Disputes</Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Package className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/lots')}>Inspect Lots</Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/transactions')}>Review Transactions</Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<LineChart className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/market-data')}>Check Market Data</Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Activity className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/admin/audit-logs')}>View Audit Log</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<FileCheck className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/verification')}>Review Buyers</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Scale className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/disputes')}>Review Disputes</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Package className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/lots')}>Inspect Lots</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/transactions')}>Review Transactions</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<LineChart className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/market-data')}>Check Market Data</Button>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Activity className="w-3.5 h-3.5" />} onClick={() => navigate('/admin/audit-logs')}>View Audit Log</Button>
               </div>
             </Card>
           </div>
@@ -1149,7 +1158,7 @@ export const AdminPage: React.FC = () => {
       if (path === '/admin/profile') {
         navigate(path);
       } else {
-        setActiveTab(path as TabId);
+        navigate(path as string);
       }
     }}>
       <MobileStack spacing="md" className="max-w-none">
@@ -1159,13 +1168,13 @@ export const AdminPage: React.FC = () => {
           roleBadge={<StatusBadge status="verified-buyer" label="Admin" size="sm" />}
           statusBadge={<SyncStatus state="Synced" lastSyncedTime="1m ago" />}
           primaryAction={
-            <Button variant="primary" size="md" leftIcon={<ShieldCheck className="w-4 h-4" />} onClick={() => setActiveTab('/admin/audit-logs')}>
+            <Button variant="primary" size="md" leftIcon={<ShieldCheck className="w-4 h-4" />} onClick={() => navigate('/admin/audit-logs')}>
               Audit Action
             </Button>
           }
         />
 
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as TabId)} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => navigate(id as TabId)} />
 
         {activeTab === '/admin' && renderDashboard()}
         {activeTab === '/admin/users' && renderUsersTab()}

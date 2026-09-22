@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -152,7 +152,16 @@ const mapDisputeStatus = (status: string): 'active' | 'completed' | 'warning' | 
 export const FieldAgentPage: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('/field-agent');
+  const location = useLocation();
+
+  const getActiveTab = (): string => {
+    const path = location.pathname;
+    const validTabs = ['/field-agent', '/field-agent/farmers', '/field-agent/lots', '/field-agent/tasks', '/field-agent/disputes', '/field-agent/activity'];
+    if (validTabs.includes(path)) return path;
+    return '/field-agent';
+  };
+
+  const activeTab = getActiveTab();
 
   const [lots, setLots] = useState<BackendLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
@@ -389,7 +398,7 @@ export const FieldAgentPage: React.FC = () => {
       if (path === '/field-agent/profile') {
         navigate(path);
       } else {
-        setActiveTab(path);
+        navigate(path);
       }
     }}>
       <MobileStack spacing="md" className="max-w-none">
@@ -601,13 +610,13 @@ export const FieldAgentPage: React.FC = () => {
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
                   Add Farmer
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/lots')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/lots')}>
                   Capture Evidence
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/tasks')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/tasks')}>
                   Review Task
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/disputes')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/disputes')}>
                   Report Issue
                 </Button>
               </div>
@@ -784,13 +793,13 @@ export const FieldAgentPage: React.FC = () => {
                 <Button variant="secondary" size="sm" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />} onClick={handleOpenAddFarmer}>
                   Add Farmer
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/lots')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<Camera className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/lots')}>
                   Capture Evidence
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/tasks')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<ClipboardList className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/tasks')}>
                   Review Task
                 </Button>
-                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => setActiveTab('/field-agent/disputes')}>
+                <Button variant="secondary" size="sm" fullWidth leftIcon={<AlertTriangle className="w-3.5 h-3.5" />} onClick={() => navigate('/field-agent/disputes')}>
                   Report Issue
                 </Button>
               </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MobileStack } from '@/components/layout/MobileStack';
@@ -166,7 +166,16 @@ const mapPaymentStatus = (status: string): 'active' | 'completed' | 'warning' | 
 export const FpoPage: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('/fpo');
+  const location = useLocation();
+
+  const getActiveTab = (): string => {
+    const path = location.pathname;
+    const validTabs = ['/fpo', '/fpo/members', '/fpo/lots', '/fpo/demand', '/fpo/offers', '/fpo/transactions', '/fpo/analytics'];
+    if (validTabs.includes(path)) return path;
+    return '/fpo';
+  };
+
+  const activeTab = getActiveTab();
 
   const [lotsLoading, setLotsLoading] = useState(false);
   const [lotsError, setLotsError] = useState<string | null>(null);
@@ -331,7 +340,7 @@ export const FpoPage: React.FC = () => {
       if (path === '/fpo/profile') {
         navigate(path);
       } else {
-        setActiveTab(path);
+        navigate(path);
       }
     }}>
       <MobileStack spacing="md">

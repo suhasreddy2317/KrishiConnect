@@ -28,24 +28,24 @@ export const App: React.FC = () => {
               <Route index element={<HomePage />} />
             </Route>
             <Route path="/" element={<AppLayout />}>
-              <Route path="farmer" element={
-                <ProtectedRoute allowedRoles={['farmer']}>
-                  <FarmerPage />
-                </ProtectedRoute>
-              } />
               <Route path="farmer/profile" element={
                 <ProtectedRoute allowedRoles={['farmer']}>
                   <ProfilePage />
                 </ProtectedRoute>
               } />
-              <Route path="fpo" element={
-                <ProtectedRoute allowedRoles={['fpo_manager']}>
-                  <FpoPage />
+              <Route path="farmer/*" element={
+                <ProtectedRoute allowedRoles={['farmer']}>
+                  <FarmerPage />
                 </ProtectedRoute>
               } />
               <Route path="fpo/profile" element={
                 <ProtectedRoute allowedRoles={['fpo_manager']}>
                   <ProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="fpo/*" element={
+                <ProtectedRoute allowedRoles={['fpo_manager']}>
+                  <FpoPage />
                 </ProtectedRoute>
               } />
               <Route path="buyer/profile" element={
@@ -58,24 +58,24 @@ export const App: React.FC = () => {
                   <BuyerPage />
                 </ProtectedRoute>
               } />
-              <Route path="field-agent" element={
-                <ProtectedRoute allowedRoles={['field_agent']}>
-                  <FieldAgentPage />
-                </ProtectedRoute>
-              } />
               <Route path="field-agent/profile" element={
                 <ProtectedRoute allowedRoles={['field_agent']}>
                   <ProfilePage />
                 </ProtectedRoute>
               } />
-              <Route path="admin" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminPage />
+              <Route path="field-agent/*" element={
+                <ProtectedRoute allowedRoles={['field_agent']}>
+                  <FieldAgentPage />
                 </ProtectedRoute>
               } />
               <Route path="admin/profile" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="admin/*" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
