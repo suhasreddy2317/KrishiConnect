@@ -8,7 +8,7 @@ from app.models.payment import Payment
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.payment import PaymentCreate, PaymentListResponse, PaymentUpdate, PaymentResponse
-from app.services.transactions import TransactionError, create_payment, update_payment_status
+from app.services.transactions import TransactionError, create_payment, update_payment_status, confirm_payment_receipt
 from app.utils.dependencies import get_current_user, require_roles
 
 router = APIRouter()
@@ -140,6 +140,28 @@ def update_payment_status_endpoint(
             status=payload.status,
             reference=payload.reference,
             confirmed_at=payload.confirmed_at,
+            actor_user_id=current_user.id,
+            actor_role=current_user.role,
+        )
+    except TransactionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return payment
+
+
+@router.post("/{payment_id}/confirm-receipt", response_model=PaymentResponse)
+def confirm_payment_receipt_endpoint(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.farmer)),
+):
+    payment = db.get(Payment, payment_id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    _assert_payment_visible(db, payment, current_user)
+    try:
+        payment = confirm_payment_receipt(
+            db,
+            payment_id=payment_id,
             actor_user_id=current_user.id,
             actor_role=current_user.role,
         )

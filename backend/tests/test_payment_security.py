@@ -214,3 +214,138 @@ def test_unrelated_farmer_cannot_set_another_farmers_payment_processing(data):
     )
     assert response.status_code == 403
     assert "not authorized" in response.json()["detail"].lower()
+
+
+def _move_txn_to_payment_pending(data, txn_id, farmer_token):
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {farmer_token}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "dispatched"},
+        headers={"Authorization": f"Bearer {farmer_token}"},
+    )
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000401", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000401", "password": DEMO_PASS}).json()["access_token"]
+
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "in_transit"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "delivered"},
+        headers={"Authorization": f"Bearer {farmer_token}"},
+    )
+    client.patch(
+        f"/api/transactions/{txn_id}/status",
+        json={"status": "payment_pending"},
+        headers={"Authorization": f"Bearer {farmer_token}"},
+    )
+
+
+def test_farmer_can_confirm_own_eligible_payment(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    _move_txn_to_payment_pending(data, txn_id, token_f2)
+
+    payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_f2}"}).json()
+    assert payments_resp["total"] == 1
+    payment_id = payments_resp["items"][0]["id"]
+    assert payments_resp["items"][0]["status"] == "pending"
+
+    response = client.post(
+        f"/api/payments/{payment_id}/confirm-receipt",
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 200, f"Failed at confirm-receipt: {response.text}"
+    assert response.json()["status"] == "completed"
+
+    txn_after = client.get(f"/api/transactions/{txn_id}", headers={"Authorization": f"Bearer {token_f2}"}).json()
+    assert txn_after["status"] == "completed"
+
+
+def test_farmer_cannot_confirm_another_farmers_payment(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    _move_txn_to_payment_pending(data, txn_id, token_f2)
+
+    payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_f2}"}).json()
+    payment_id = payments_resp["items"][0]["id"]
+
+    token_f1 = _login(FARMER1_USER_PHONE)
+    response = client.post(
+        f"/api/payments/{payment_id}/confirm-receipt",
+        headers={"Authorization": f"Bearer {token_f1}"},
+    )
+    assert response.status_code == 403
+    assert "not authorized" in response.json()["detail"].lower()
+
+
+def test_farmer_cannot_confirm_payment_in_invalid_state(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    token_b = _login(BUYER1_USER_PHONE)
+    payment = client.post(
+        "/api/payments/",
+        json={"transaction_id": txn_id, "amount": 2700.0},
+        headers={"Authorization": f"Bearer {token_b}"},
+    ).json()
+    payment_id = payment["id"]
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000402", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000402", "password": DEMO_PASS}).json()["access_token"]
+
+    client.patch(
+        f"/api/payments/{payment_id}/status",
+        json={"status": "completed"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    token_f2 = _login(FARMER2_USER_PHONE)
+    response = client.post(
+        f"/api/payments/{payment_id}/confirm-receipt",
+        headers={"Authorization": f"Bearer {token_f2}"},
+    )
+    assert response.status_code == 400
+
+
+def test_admin_can_still_set_payment_completed(data):
+    offer_id, txn = _create_accepted_offer(data)
+    token_f2 = _login(FARMER2_USER_PHONE)
+    txn_id = txn["id"]
+
+    _move_txn_to_payment_pending(data, txn_id, token_f2)
+
+    payments_resp = client.get("/api/payments/", headers={"Authorization": f"Bearer {token_f2}"}).json()
+    payment_id = payments_resp["items"][0]["id"]
+
+    admin_pw = hash_password(DEMO_PASS)
+    admin_user = User(name="Admin User", phone="+919910000403", role=UserRole.admin, is_active=True, password_hash=admin_pw)
+    data.db.add(admin_user)
+    data.db.commit()
+    token_admin = client.post("/api/auth/login", json={"identifier": "+919910000403", "password": DEMO_PASS}).json()["access_token"]
+
+    response = client.patch(
+        f"/api/payments/{payment_id}/status",
+        json={"status": "completed"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"

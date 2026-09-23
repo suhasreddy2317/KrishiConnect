@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models.demand import Demand
 from app.models.enums import TransactionStatus, UserRole, LotStatus
+from app.models.farmer import Farmer
 from app.models.offer import Offer
 from app.models.produce_lot import ProduceLot
 from app.models.transaction import Transaction
@@ -564,6 +565,62 @@ def update_payment_status(
     )
     db.commit()
     db.refresh(payment)
+    return payment
+
+
+def confirm_payment_receipt(
+    db: Session,
+    payment_id: int,
+    actor_user_id: Optional[int] = None,
+    actor_role: Optional[UserRole] = None,
+) -> Payment:
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise TransactionError("Payment not found", status_code=404)
+
+    transaction = db.get(Transaction, payment.transaction_id)
+    if transaction is None:
+        raise TransactionError("Transaction not found", status_code=404)
+
+    if actor_role != UserRole.farmer:
+        raise TransactionError("Only farmers can confirm payment receipt", status_code=403)
+
+    farmer = db.query(Farmer).filter(Farmer.user_id == actor_user_id).first()
+    if not farmer or transaction.farmer_id != farmer.id:
+        raise TransactionError("Not authorized to confirm this payment", status_code=403)
+
+    if payment.status not in ("pending", "initiated", "processing", "confirmed"):
+        raise TransactionError(
+            f"Payment cannot be confirmed from status '{payment.status}'",
+            status_code=400,
+        )
+
+    previous_payment_status = payment.status
+    payment.status = "completed"
+    payment.confirmed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(payment)
+
+    record_audit(
+        db,
+        action="payment.status.updated",
+        entity_type="payment",
+        entity_id=payment.id,
+        actor_user_id=actor_user_id,
+        details=f"status {previous_payment_status} -> completed (farmer confirmation)",
+    )
+    db.commit()
+    db.refresh(payment)
+
+    if transaction.status == TransactionStatus.payment_pending:
+        update_transaction_status(
+            db,
+            transaction_id=transaction.id,
+            next_status=TransactionStatus.completed,
+            actor_user_id=actor_user_id,
+            actor_role=None,
+        )
+
     return payment
 
 

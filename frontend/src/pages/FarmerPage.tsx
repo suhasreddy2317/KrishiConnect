@@ -152,19 +152,10 @@ interface BackendDispute {
 }
 
 export const FarmerPage: React.FC = () => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak, hasVoiceFor } = useTextToSpeech();
-
-  const PAYMENT_ALLOWED_STATUSES_BY_ROLE: Record<string, string[]> = {
-    buyer: ['pending', 'initiated', 'processing'],
-    farmer: ['processing'],
-    fpo_manager: [],
-    field_agent: [],
-    admin: ['pending', 'initiated', 'processing', 'confirmed', 'completed', 'failed', 'refunded'],
-  };
-  const allowedPaymentStatuses = PAYMENT_ALLOWED_STATUSES_BY_ROLE[user?.role || ''] ?? [];
 
   const localizedCropName = (crop: string): string => {
     const map: Record<string, string> = {
@@ -725,22 +716,27 @@ export const FarmerPage: React.FC = () => {
     });
   };
 
-  const handleUpdatePaymentStatus = async (paymentId: number, status: string) => {
+  const isPaymentEligibleForConfirmation = (payment: BackendPayment): boolean => {
+    if (!['pending', 'initiated', 'processing', 'confirmed'].includes(payment.status)) {
+      return false;
+    }
+    const transaction = transactions.find(tx => tx.id === payment.transaction_id);
+    return transaction?.status === 'payment_pending';
+  };
+
+  const handleConfirmPaymentReceipt = async (paymentId: number) => {
     if (!token) return;
-    requestConfirm(`Update payment status to ${status}?`, async () => {
+    requestConfirm('Confirm that you have received this payment?', async () => {
       try {
-        await apiRequest(`/payments/${paymentId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status }),
+        await apiRequest(`/payments/${paymentId}/confirm-receipt`, {
+          method: 'POST',
         }, token);
         await fetchPayments();
+        await fetchTransactions();
+        await fetchShipments();
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to update payment';
-        if (/not authorized to set payment status/i.test(message)) {
-          setPaymentsActionError("You don't have permission to update this payment.");
-        } else {
-          setPaymentsActionError(message);
-        }
+        const message = err instanceof Error ? err.message : 'Failed to confirm payment';
+        setPaymentsActionError(message);
       }
     });
   };
@@ -1043,9 +1039,11 @@ export const FarmerPage: React.FC = () => {
               {payment.confirmed_at && <div>Confirmed: {new Date(payment.confirmed_at).toLocaleString()}</div>}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {['processing', 'completed', 'failed'].filter(status => allowedPaymentStatuses.includes(status)).map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdatePaymentStatus(payment.id, next)}>{t('farmerPage.markStatus', { status: next })}</Button>
-              ))}
+              {isPaymentEligibleForConfirmation(payment) && (
+                <Button key="confirm" size="sm" variant="primary" onClick={() => handleConfirmPaymentReceipt(payment.id)}>
+                  Confirm Payment Received
+                </Button>
+              )}
             </div>
           </Card>
         ))}
