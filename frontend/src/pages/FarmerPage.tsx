@@ -152,10 +152,19 @@ interface BackendDispute {
 }
 
 export const FarmerPage: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak, hasVoiceFor } = useTextToSpeech();
+
+  const PAYMENT_ALLOWED_STATUSES_BY_ROLE: Record<string, string[]> = {
+    buyer: ['pending', 'initiated', 'processing'],
+    farmer: ['processing'],
+    fpo_manager: [],
+    field_agent: [],
+    admin: ['pending', 'initiated', 'processing', 'confirmed', 'completed', 'failed', 'refunded'],
+  };
+  const allowedPaymentStatuses = PAYMENT_ALLOWED_STATUSES_BY_ROLE[user?.role || ''] ?? [];
 
   const localizedCropName = (crop: string): string => {
     const map: Record<string, string> = {
@@ -214,6 +223,7 @@ export const FarmerPage: React.FC = () => {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
   const [payments, setPayments] = useState<BackendPayment[]>([]);
+  const [paymentsActionError, setPaymentsActionError] = useState<string | null>(null);
 
   const [disputesLoading, setDisputesLoading] = useState(false);
   const [disputesError, setDisputesError] = useState<string | null>(null);
@@ -352,6 +362,7 @@ export const FarmerPage: React.FC = () => {
     if (!token) return;
     setPaymentsLoading(true);
     setPaymentsError(null);
+    setPaymentsActionError(null);
     try {
       const data = await apiRequest<{ items: BackendPayment[]; total: number }>('/payments/', { method: 'GET' }, token);
       setPayments(Array.isArray(data.items) ? data.items : []);
@@ -724,7 +735,12 @@ export const FarmerPage: React.FC = () => {
         }, token);
         await fetchPayments();
       } catch (err) {
-        setPaymentsError(err instanceof Error ? err.message : 'Failed to update payment');
+        const message = err instanceof Error ? err.message : 'Failed to update payment';
+        if (/not authorized to set payment status/i.test(message)) {
+          setPaymentsActionError("You don't have permission to update this payment.");
+        } else {
+          setPaymentsActionError(message);
+        }
       }
     });
   };
@@ -1013,6 +1029,12 @@ export const FarmerPage: React.FC = () => {
 
     return (
       <div className="space-y-4">
+        {paymentsActionError && (
+          <div className="flex items-center justify-between rounded-md border border-status-error/30 bg-status-error/10 px-4 py-3 text-xs text-status-error">
+            <span>{paymentsActionError}</span>
+            <Button variant="ghost" size="sm" onClick={() => setPaymentsActionError(null)}>Dismiss</Button>
+          </div>
+        )}
         {payments.map(payment => (
           <Card key={payment.id} variant="default" title={`Payment #${payment.id}`} subtitle={`Transaction #${payment.transaction_id}`} headerAction={<StatusBadge status={payment.status === 'completed' ? 'completed' : 'active'} label={payment.status} size="sm" />}>
             <div className="text-xs text-text-muted font-mono space-y-1">
@@ -1021,7 +1043,7 @@ export const FarmerPage: React.FC = () => {
               {payment.confirmed_at && <div>Confirmed: {new Date(payment.confirmed_at).toLocaleString()}</div>}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {['processing', 'completed', 'failed'].map(next => (
+              {['processing', 'completed', 'failed'].filter(status => allowedPaymentStatuses.includes(status)).map(next => (
                 <Button key={next} size="sm" variant="outline" onClick={() => handleUpdatePaymentStatus(payment.id, next)}>{t('farmerPage.markStatus', { status: next })}</Button>
               ))}
             </div>
