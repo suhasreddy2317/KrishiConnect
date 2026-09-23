@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
+import { TextSizeProvider } from '@/context/TextSizeContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/navigation/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
@@ -19,47 +20,48 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <LanguageProvider>
-        <SplashScreen />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<LandingLayout />}>
-              <Route index element={<HomePage />} />
-            </Route>
-            <Route path="/" element={<AppLayout />}>
-              <Route path="farmer" element={
-                <ProtectedRoute allowedRoles={['farmer']}>
-                  <FarmerPage />
-                </ProtectedRoute>
-              } />
-              <Route path="fpo" element={
-                <ProtectedRoute allowedRoles={['fpo_manager']}>
-                  <FpoPage />
-                </ProtectedRoute>
-              } />
-              <Route path="buyer/*" element={
-                <ProtectedRoute allowedRoles={['buyer']}>
-                  <BuyerPage />
-                </ProtectedRoute>
-              } />
-              <Route path="field-agent" element={
-                <ProtectedRoute allowedRoles={['field_agent']}>
-                  <FieldAgentPage />
-                </ProtectedRoute>
-              } />
-              <Route path="admin" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminPage />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <TextSizeProvider>
+          <SplashScreen />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<LandingLayout />}>
+                <Route index element={<HomePage />} />
+              </Route>
+              <Route path="/" element={<AppLayout />}>
+                <Route path="farmer" element={
+                  <ProtectedRoute allowedRoles={['farmer']}>
+                    <FarmerPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="fpo" element={
+                  <ProtectedRoute allowedRoles={['fpo_manager']}>
+                    <FpoPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="buyer/*" element={
+                  <ProtectedRoute allowedRoles={['buyer']}>
+                    <BuyerPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="field-agent" element={
+                  <ProtectedRoute allowedRoles={['field_agent']}>
+                    <FieldAgentPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TextSizeProvider>
       </LanguageProvider>
     </AuthProvider>
   );
 };
 
 export default App;
-

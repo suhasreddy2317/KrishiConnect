@@ -12,7 +12,15 @@ const TextSizeContext = createContext<TextSizeContextType>({
 
 export const TextSizeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLargeText, setIsLargeText] = useState<boolean>(() => {
-    return localStorage.getItem('kc_large_text') === 'true';
+    try {
+      const sessionVal = sessionStorage.getItem('kc_large_text');
+      if (sessionVal !== null) {
+        return sessionVal === 'true';
+      }
+      return localStorage.getItem('kc_large_text') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
@@ -21,7 +29,12 @@ export const TextSizeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else {
       document.documentElement.classList.remove('text-size-lg');
     }
-    localStorage.setItem('kc_large_text', String(isLargeText));
+    try {
+      sessionStorage.setItem('kc_large_text', String(isLargeText));
+      localStorage.setItem('kc_large_text', String(isLargeText));
+    } catch {
+      // Storage unavailable or disabled
+    }
   }, [isLargeText]);
 
   const toggleLargeText = () => setIsLargeText((prev) => !prev);

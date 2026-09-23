@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ROLE_CONFIGS, UserRole } from '@/config/navigation';
 import { useTextSize } from '@/context/TextSizeContext';
+import { NotificationPopover } from '@/components/navigation/NotificationPopover';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Menu,
@@ -31,6 +32,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const { isLargeText, toggleLargeText } = useTextSize();
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(2);
   const palette = ROLE_CONFIGS[currentRole].palette;
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 h-16 bg-surface/95 backdrop-blur border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between',
+        'shrink-0 z-40 h-16 bg-surface/95 backdrop-blur border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between',
         className
       )}
     >
@@ -85,10 +88,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       </div>
 
       <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Role Switcher */}
         <div className="relative">
           <button
             type="button"
-            onClick={() => setRoleMenuOpen(!roleMenuOpen)}
+            onClick={() => {
+              setRoleMenuOpen(!roleMenuOpen);
+              if (notificationsOpen) setNotificationsOpen(false);
+            }}
             className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-surface-raised hover:bg-border text-xs font-medium text-text-main border border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             <span
@@ -146,15 +153,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           )}
         </div>
 
+        {/* Text Size Control */}
         <button
           type="button"
           onClick={toggleLargeText}
           aria-label={isLargeText ? 'Standard text size' : 'Large text accessibility mode'}
           title={isLargeText ? 'Disable Large Text' : 'Enable Large Text (18px base)'}
           className={cn(
-            'p-1.5 rounded-md text-xs font-mono font-bold transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+            'p-1.5 rounded-md text-xs font-mono font-bold transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
             isLargeText
-              ? 'bg-accent text-text-main border-accent'
+              ? 'bg-primary text-white border-primary shadow-sm font-semibold'
               : 'bg-surface-raised text-text-muted hover:text-text-main border-border'
           )}
         >
@@ -166,6 +174,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </button>
 
+        {/* Backend Status */}
         <div
           className="flex items-center space-x-1.5 px-2 py-1 rounded-full text-xs font-mono border"
           style={{
@@ -190,14 +199,39 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </span>
         </div>
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="p-1.5 rounded-md text-text-muted hover:text-text-main hover:bg-surface-raised transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: palette.accent }} />
-        </button>
+        {/* Notification Bell & Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setNotificationsOpen((prev) => !prev);
+              if (roleMenuOpen) setRoleMenuOpen(false);
+            }}
+            aria-label="Notifications"
+            aria-expanded={notificationsOpen}
+            className={cn(
+              'p-1.5 rounded-md transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              notificationsOpen
+                ? 'bg-surface-raised text-text-main ring-1 ring-border'
+                : 'text-text-muted hover:text-text-main hover:bg-surface-raised'
+            )}
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute top-1 right-1 w-2 h-2 rounded-full ring-2 ring-surface animate-pulse"
+                style={{ backgroundColor: palette.accent }}
+              />
+            )}
+          </button>
+
+          <NotificationPopover
+            isOpen={notificationsOpen}
+            onClose={() => setNotificationsOpen(false)}
+            currentRole={currentRole}
+            onUnreadCountChange={setUnreadCount}
+          />
+        </div>
       </div>
     </header>
   );

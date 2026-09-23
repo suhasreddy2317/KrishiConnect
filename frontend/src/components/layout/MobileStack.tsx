@@ -19,7 +19,7 @@ export const MobileStack: React.FC<MobileStackProps> = ({
 
   return (
     <div
-      className={cn('w-full flex flex-col max-w-2xl mx-auto', spacingStyles[spacing], className)}
+      className={cn('w-full flex flex-col', spacingStyles[spacing], className)}
       {...props}
     >
       {children}

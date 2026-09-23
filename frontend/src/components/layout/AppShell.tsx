@@ -54,7 +54,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     <div
       data-role={currentRole}
       className={cn(
-        'min-h-screen flex bg-background text-text-main',
+        'flex-1 flex min-h-0 w-full overflow-hidden bg-background text-text-main',
       )}
     >
       <Sidebar
@@ -66,7 +66,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         }}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         <TopHeader
           currentRole={currentRole}
           title={translatedTitle}
@@ -76,21 +76,23 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <main
           className={cn(
-            'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6',
+            'flex-1 min-h-0 overflow-y-auto w-full',
             isFarmer && 'pb-24 md:pb-8'
           )}
         >
-          {children || <Outlet />}
-        </main>
-
-        <footer className="border-t border-border bg-background py-4 text-xs text-text-muted px-4 sm:px-6 lg:px-8 hidden md:block">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Activity className="w-3.5 h-3.5 text-status-success" />
-              <span>KrishiConnect • Trust Ledger Operating System</span>
-            </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {children || <Outlet />}
           </div>
-        </footer>
+
+          <footer className="border-t border-border bg-background py-4 text-xs text-text-muted px-4 sm:px-6 lg:px-8 hidden md:block">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Activity className="w-3.5 h-3.5 text-status-success" />
+                <span>KrishiConnect • Trust Ledger Operating System</span>
+              </div>
+            </div>
+          </footer>
+        </main>
       </div>
 
       <Drawer

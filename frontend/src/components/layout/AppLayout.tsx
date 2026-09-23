@@ -6,7 +6,6 @@ import {
   Building2,
   MapPin,
   ShieldCheck,
-  Activity,
   Menu,
   X,
   Layers,
@@ -63,8 +62,8 @@ export const AppLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-text-main">
-      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur border-b border-border">
+    <div className="h-screen flex flex-col bg-background text-text-main overflow-hidden">
+      <header className="shrink-0 z-50 bg-surface/90 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
@@ -212,18 +211,9 @@ export const AppLayout: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 flex min-h-0 w-full overflow-hidden">
         <Outlet />
-      </main>
-
-      <footer className="border-t border-border bg-background py-6 text-xs text-text-muted">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Activity className="w-3.5 h-3.5 text-status-success" />
-            <span>KrishiConnect • Trust Ledger</span>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };

@@ -482,7 +482,9 @@ export const FpoPage: React.FC = () => {
                 </div>
               </Card>
             </Section>
+          </div>
 
+          <div className="lg:col-span-3">
             <Section title="Payout Ledger" description="Pro-rata distribution from accepted offers.">
               <Card variant="default" padding="none">
                 {paymentsLoading ? (
@@ -501,6 +503,7 @@ export const FpoPage: React.FC = () => {
                       data={payments.slice(0, 5)}
                       keyExtractor={(item) => String(item.id)}
                       emptyMessage="No payments recorded"
+                      className="border-0 rounded-none overflow-y-hidden"
                     />
                   </>
                 )}
@@ -644,6 +647,7 @@ export const FpoPage: React.FC = () => {
                       data={payments.slice(0, 5)}
                       keyExtractor={(item) => String(item.id)}
                       emptyMessage="No payments recorded"
+                      className="border-0 rounded-none overflow-y-hidden"
                     />
                   </>
                 )}
