@@ -190,26 +190,26 @@ type Point = { x: number; y: number };
 
 const routeSegments = [
   {
-    start: { x: 50, y: 155 } as Point,
-    cp1: { x: 50, y: 100 } as Point,
-    cp2: { x: 80, y: 80 } as Point,
-    end: { x: 120, y: 80 } as Point,
+    start: { x: 35, y: 155 } as Point,
+    cp1: { x: 35, y: 100 } as Point,
+    cp2: { x: 88, y: 80 } as Point,
+    end: { x: 158, y: 80 } as Point,
   },
   {
-    start: { x: 120, y: 80 } as Point,
-    cp1: { x: 160, y: 80 } as Point,
-    cp2: { x: 200, y: 55 } as Point,
-    end: { x: 220, y: 65 } as Point,
+    start: { x: 158, y: 80 } as Point,
+    cp1: { x: 228, y: 80 } as Point,
+    cp2: { x: 298, y: 55 } as Point,
+    end: { x: 333, y: 65 } as Point,
   },
   {
-    start: { x: 220, y: 65 } as Point,
-    cp1: { x: 240, y: 75 } as Point,
-    cp2: { x: 280, y: 100 } as Point,
-    end: { x: 295, y: 155 } as Point,
+    start: { x: 333, y: 65 } as Point,
+    cp1: { x: 369, y: 75 } as Point,
+    cp2: { x: 439, y: 100 } as Point,
+    end: { x: 465, y: 155 } as Point,
   },
 ];
 
-const pathStr = `M 50 155 C 50 100, 80 80, 120 80 C 160 80, 200 55, 220 65 C 240 75, 280 100, 295 155`;
+const pathStr = `M 35 155 C 35 100, 88 80, 158 80 C 228 80, 298 55, 333 65 C 369 75, 439 100, 465 155`;
 
 function getPositionOnRoute(t: number): Point {
   const segCount = routeSegments.length;
@@ -253,10 +253,10 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
   const isPaymentPending = shipment.status === 'payment_pending';
   const isComplete = shipment.status === 'completed' || shipment.status === 'delivered';
 
-  const mapWidth = 340;
+  const mapWidth = 500;
   const mapHeight = 210;
-  const pickupX = 50;
-  const destX = 295;
+  const pickupX = 35;
+  const destX = 465;
   const pickupY = 155;
   const destY = 155;
 
@@ -312,11 +312,11 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
         />
       </div>
 
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 flex justify-center">
         <svg
           viewBox={`0 0 ${mapWidth} ${mapHeight}`}
-          className="w-full h-auto"
-          style={{ maxHeight: '220px', display: 'block' }}
+          className="w-auto h-auto"
+          style={{ maxHeight: '280px', maxWidth: '100%', display: 'block' }}
         >
           <defs>
             <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -326,21 +326,21 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
 
           <g opacity="0.35">
             <path
-              d="M 40 175 Q 100 168 160 175 Q 220 182 280 175 L 280 205 L 40 205 Z"
+              d="M 35 175 Q 120 168 220 175 Q 320 182 420 175 L 420 205 L 35 205 Z"
               fill="#EBF2E5"
               stroke="#C8D4BB"
               strokeWidth="0.5"
               opacity="0.3"
             />
             <path
-              d="M 150 170 Q 220 163 290 170 L 290 205 L 150 205 Z"
+              d="M 220 170 Q 320 163 420 170 L 420 205 L 220 205 Z"
               fill="#F3EBE0"
               stroke="#D0C4B0"
               strokeWidth="0.5"
               opacity="0.25"
             />
             <path
-              d="M 40 165 Q 100 158 160 165 L 160 185 L 40 185 Z"
+              d="M 35 165 Q 120 158 220 165 L 220 185 L 35 185 Z"
               fill="#EBF2E5"
               stroke="#C8D4BB"
               strokeWidth="0.5"
@@ -349,32 +349,32 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
           </g>
 
           <g opacity="0.07">
-            <circle cx="65" cy="188" r="4" fill="#8BA873" />
+            <circle cx="100" cy="188" r="4" fill="#8BA873" />
             <path
-              d="M65 185 L65 181 M62 188 L58 188 M68 188 L72 188"
+              d="M100 185 L100 181 M97 188 L93 188 M103 188 L107 188"
               stroke="#8BA873"
               strokeWidth="0.8"
             />
-            <circle cx="220" cy="192" r="3.5" fill="#8BA873" />
+            <circle cx="320" cy="192" r="3.5" fill="#8BA873" />
             <path
-              d="M220 189 L220 185 M217 192 L213 192 M223 192 L227 192"
+              d="M320 189 L320 185 M317 192 L313 192 M323 192 L327 192"
               stroke="#8BA873"
               strokeWidth="0.8"
             />
-            <circle cx="275" cy="186" r="3" fill="#8BA873" />
+            <circle cx="380" cy="186" r="3" fill="#8BA873" />
             <path
-              d="M275 183 L275 179 M272 186 L268 186 M278 186 L282 186"
+              d="M380 183 L380 179 M377 186 L373 186 M383 186 L387 186"
               stroke="#8BA873"
               strokeWidth="0.8"
             />
           </g>
 
           <g opacity="0.05" stroke="#B0B8A0" strokeWidth="0.5" fill="none">
-            <line x1="80" y1="170" x2="80" y2="200" />
-            <line x1="180" y1="170" x2="180" y2="200" />
-            <line x1="260" y1="170" x2="260" y2="200" />
-            <line x1="40" y1="180" x2="300" y2="180" />
-            <line x1="40" y1="190" x2="300" y2="190" />
+            <line x1="130" y1="170" x2="130" y2="200" />
+            <line x1="250" y1="170" x2="250" y2="200" />
+            <line x1="360" y1="170" x2="360" y2="200" />
+            <line x1="35" y1="180" x2="420" y2="180" />
+            <line x1="35" y1="190" x2="420" y2="190" />
           </g>
 
           <path
