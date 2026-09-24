@@ -36,11 +36,23 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-green-900/30" />
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none motion-reduce:hidden"
+      >
+        <source src="/videos/login-grass.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-main tracking-tight">KrishiConnect</h1>
-          <p className="text-text-muted mt-2 text-sm">Agricultural market intelligence & trading platform</p>
+          <h1 className="text-3xl font-bold text-white drop-shadow-sm tracking-tight">KrishiConnect</h1>
+          <p className="text-white/90 mt-2 text-sm drop-shadow-sm">Agricultural market intelligence & trading platform</p>
         </div>
 
         <Card variant="default" padding="lg" title="Sign in" subtitle="Enter your phone number and password to continue">
