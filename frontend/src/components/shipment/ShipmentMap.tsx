@@ -36,9 +36,9 @@ function getVehiclePosition(status: string): number {
     case 'delivered':
       return 0.85;
     case 'payment_pending':
-      return 0.85;
+      return 0.9;
     case 'completed':
-      return 0.85;
+      return 1.0;
     case 'disputed':
       return 0.5;
     default:
@@ -148,6 +148,104 @@ function getStatusConfig(status: string) {
   }
 }
 
+function evalCubicBezier(
+  p0: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number },
+  t: number
+) {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const t2 = t * t;
+  return {
+    x:
+      mt2 * mt * p0.x +
+      3 * mt2 * t * p1.x +
+      3 * mt * t2 * p2.x +
+      t2 * t * p3.x,
+    y:
+      mt2 * mt * p0.y +
+      3 * mt2 * t * p1.y +
+      3 * mt * t2 * p2.y +
+      t2 * t * p3.y,
+  };
+}
+
+function evalCubicBezierDerivative(
+  p0: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number },
+  t: number
+) {
+  const mt = 1 - t;
+  return {
+    x: 3 * mt * mt * (p1.x - p0.x) + 6 * mt * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x),
+    y: 3 * mt * mt * (p1.y - p0.y) + 6 * mt * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y),
+  };
+}
+
+type Point = { x: number; y: number };
+
+const routeSegments = [
+  {
+    start: { x: 50, y: 155 } as Point,
+    cp1: { x: 50, y: 100 } as Point,
+    cp2: { x: 80, y: 80 } as Point,
+    end: { x: 120, y: 80 } as Point,
+  },
+  {
+    start: { x: 120, y: 80 } as Point,
+    cp1: { x: 160, y: 80 } as Point,
+    cp2: { x: 200, y: 55 } as Point,
+    end: { x: 220, y: 65 } as Point,
+  },
+  {
+    start: { x: 220, y: 65 } as Point,
+    cp1: { x: 240, y: 75 } as Point,
+    cp2: { x: 280, y: 100 } as Point,
+    end: { x: 295, y: 155 } as Point,
+  },
+];
+
+const pathStr = `M 50 155 C 50 100, 80 80, 120 80 C 160 80, 200 55, 220 65 C 240 75, 280 100, 295 155`;
+
+function getPositionOnRoute(t: number): Point {
+  const segCount = routeSegments.length;
+  const clampedT = Math.max(0, Math.min(1, t));
+  const segFloat = clampedT * segCount;
+  const segIdx = Math.min(Math.floor(segFloat), segCount - 1);
+  const localT = segFloat - segIdx;
+  const seg = routeSegments[segIdx];
+  return evalCubicBezier(seg.start, seg.cp1, seg.cp2, seg.end, localT);
+}
+
+function getTangentOnRoute(t: number): Point {
+  const segCount = routeSegments.length;
+  const clampedT = Math.max(0, Math.min(1, t));
+  const segFloat = clampedT * segCount;
+  const segIdx = Math.min(Math.floor(segFloat), segCount - 1);
+  const localT = segFloat - segIdx;
+  const seg = routeSegments[segIdx];
+  return evalCubicBezierDerivative(seg.start, seg.cp1, seg.cp2, seg.end, localT);
+}
+
+function getVehiclePositionOnRoute(t: number) {
+  const pos = getPositionOnRoute(t);
+  const deriv = getTangentOnRoute(t);
+  const angle = Math.atan2(deriv.y, deriv.x) * (180 / Math.PI);
+  return { ...pos, angle };
+}
+
+function getWaypointPositions(): Point[] {
+  return [0.33, 0.5, 0.67].map((t) => getPositionOnRoute(t));
+}
+
+function getPinPath(cx: number, cy: number, size: number): string {
+  return `M ${cx} ${cy + size} C ${cx - size * 0.4} ${cy + size * 0.7}, ${cx - size * 0.8} ${cy - size * 0.2}, ${cx - size * 0.8} ${cy - size * 0.6} C ${cx - size * 0.8} ${cy - size * 1.2}, ${cx - size * 0.4} ${cy - size * 1.4}, ${cx} ${cy - size * 1.4} C ${cx + size * 0.4} ${cy - size * 1.4}, ${cx + size * 0.8} ${cy - size * 1.2}, ${cx + size * 0.8} ${cy - size * 0.6} C ${cx + size * 0.8} ${cy - size * 0.2}, ${cx + size * 0.4} ${cy + size * 0.7}, ${cx} ${cy + size} Z`;
+}
+
 export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className }) => {
   const statusConfig = getStatusConfig(shipment.status);
   const vehiclePos = getVehiclePosition(shipment.status);
@@ -156,13 +254,17 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
   const isComplete = shipment.status === 'completed' || shipment.status === 'delivered';
 
   const mapWidth = 340;
-  const mapHeight = 170;
-  const paddingX = 36;
-  const routeY = 60;
+  const mapHeight = 210;
+  const pickupX = 50;
+  const destX = 295;
+  const pickupY = 155;
+  const destY = 155;
 
-  const pickupX = paddingX;
-  const destX = mapWidth - paddingX;
-  const vehicleX = paddingX + (destX - paddingX) * vehiclePos;
+  const vehicleOnRoute = getVehiclePositionOnRoute(vehiclePos);
+  const vehicleX = vehicleOnRoute.x;
+  const vehicleY = vehicleOnRoute.y;
+  const vehicleAngle = vehicleOnRoute.angle;
+  const waypoints = getWaypointPositions();
 
   const formatEta = (dateStr: string | null): string => {
     if (!dateStr) return 'ETA updating';
@@ -214,7 +316,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
         <svg
           viewBox={`0 0 ${mapWidth} ${mapHeight}`}
           className="w-full h-auto"
-          style={{ maxHeight: '180px', display: 'block' }}
+          style={{ maxHeight: '220px', display: 'block' }}
         >
           <defs>
             <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -222,103 +324,218 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({ shipment, className })
             </marker>
           </defs>
 
-          <line
-            x1={pickupX}
-            y1={routeY}
-            x2={destX}
-            y2={routeY}
+          <g opacity="0.35">
+            <path
+              d="M 40 175 Q 100 168 160 175 Q 220 182 280 175 L 280 205 L 40 205 Z"
+              fill="#EBF2E5"
+              stroke="#C8D4BB"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
+            <path
+              d="M 150 170 Q 220 163 290 170 L 290 205 L 150 205 Z"
+              fill="#F3EBE0"
+              stroke="#D0C4B0"
+              strokeWidth="0.5"
+              opacity="0.25"
+            />
+            <path
+              d="M 40 165 Q 100 158 160 165 L 160 185 L 40 185 Z"
+              fill="#EBF2E5"
+              stroke="#C8D4BB"
+              strokeWidth="0.5"
+              opacity="0.15"
+            />
+          </g>
+
+          <g opacity="0.07">
+            <circle cx="65" cy="188" r="4" fill="#8BA873" />
+            <path
+              d="M65 185 L65 181 M62 188 L58 188 M68 188 L72 188"
+              stroke="#8BA873"
+              strokeWidth="0.8"
+            />
+            <circle cx="220" cy="192" r="3.5" fill="#8BA873" />
+            <path
+              d="M220 189 L220 185 M217 192 L213 192 M223 192 L227 192"
+              stroke="#8BA873"
+              strokeWidth="0.8"
+            />
+            <circle cx="275" cy="186" r="3" fill="#8BA873" />
+            <path
+              d="M275 183 L275 179 M272 186 L268 186 M278 186 L282 186"
+              stroke="#8BA873"
+              strokeWidth="0.8"
+            />
+          </g>
+
+          <g opacity="0.05" stroke="#B0B8A0" strokeWidth="0.5" fill="none">
+            <line x1="80" y1="170" x2="80" y2="200" />
+            <line x1="180" y1="170" x2="180" y2="200" />
+            <line x1="260" y1="170" x2="260" y2="200" />
+            <line x1="40" y1="180" x2="300" y2="180" />
+            <line x1="40" y1="190" x2="300" y2="190" />
+          </g>
+
+          <path
+            d={pathStr}
+            fill="none"
+            stroke="#6B7258"
+            strokeWidth="14"
+            strokeLinecap="round"
+            opacity="0.07"
+          />
+
+          <path
+            d={pathStr}
+            fill="none"
+            stroke="#9BA888"
+            strokeWidth="10"
+            strokeLinecap="round"
+            opacity="0.85"
+          />
+
+          {statusConfig.routeDash !== 'none' && (
+            <path
+              d={pathStr}
+              fill="none"
+              stroke="#7B9B80"
+              strokeWidth="3"
+              strokeDasharray={statusConfig.routeDash}
+              strokeLinecap="round"
+              opacity="0.5"
+            />
+          )}
+
+          <path
+            d={pathStr}
+            fill="none"
             stroke={statusConfig.routeColor}
-            strokeWidth="2.5"
-            strokeDasharray={statusConfig.routeDash}
-            markerEnd={statusConfig.routeDash === 'none' ? 'url(#arrowhead)' : undefined}
-            opacity="0.9"
+            strokeWidth="10"
+            pathLength="100"
+            strokeDasharray={`${vehiclePos * 100} 100`}
+            strokeLinecap="round"
+            opacity={isDisputed ? 0.75 : 0.8}
           />
 
-          <circle cx={pickupX} cy={routeY} r="6" fill={statusConfig.pickupColor} opacity="0.25" />
-          <rect
-            x={pickupX - 7}
-            y={routeY - 12}
-            width="14"
-            height="14"
-            rx="3"
-            fill={statusConfig.pickupColor}
-            opacity="1"
+          <path
+            d={pathStr}
+            fill="none"
+            stroke="#C5CCBA"
+            strokeWidth="5"
+            strokeLinecap="round"
+            opacity="0.35"
           />
-          <text
-            x={pickupX}
-            y={routeY + 4}
-            textAnchor="middle"
-            fill="#fff"
-            style={{ fontSize: '8px', fontWeight: 'bold', fontFamily: 'IBM Plex Sans, sans-serif' }}
-          >
-            F
-          </text>
 
-          <circle cx={destX} cy={routeY} r="6" fill={statusConfig.destColor} opacity="0.25" />
-          <rect
-            x={destX - 7}
-            y={routeY - 12}
-            width="14"
-            height="14"
-            rx="3"
-            fill={statusConfig.destColor}
-            opacity="1"
+          <path
+            d={pathStr}
+            fill="none"
+            stroke="#E8E8E0"
+            strokeWidth="1.5"
+            strokeDasharray="4 6"
+            strokeLinecap="round"
+            opacity="0.6"
           />
-          <text
-            x={destX}
-            y={routeY + 4}
-            textAnchor="middle"
-            fill="#fff"
-            style={{ fontSize: '8px', fontWeight: 'bold', fontFamily: 'IBM Plex Sans, sans-serif' }}
-          >
-            B
-          </text>
 
-          <rect
-            x={vehicleX - 12}
-            y={routeY - 14}
-            width="24"
-            height="24"
-            rx="12"
-            fill={statusConfig.vehicleColor}
-            opacity="0.25"
-          />
-          <g transform={`translate(${vehicleX - 7}, ${routeY - 9})`}>
-            <rect x="0" y="2" width="10" height="7" rx="1.5" fill={statusConfig.vehicleColor} opacity="1" />
-            <circle cx="2.5" cy="9.5" r="2" fill={statusConfig.vehicleColor} opacity="1" />
-            <circle cx="7.5" cy="9.5" r="2" fill={statusConfig.vehicleColor} opacity="1" />
+          {waypoints.map((wp, i) => (
+            <g key={i} transform={`translate(${wp.x}, ${wp.y})`}>
+              <circle cx="0" cy="0" r="2" fill="#8BA888" opacity="0.55" />
+              <circle cx="0" cy="0" r="3.5" fill="none" stroke="#8BA888" strokeWidth="0.5" opacity="0.25" />
+            </g>
+          ))}
+
+          <g transform={`translate(${pickupX}, ${pickupY})`}>
+            <path
+              d={getPinPath(0, 0, 8)}
+              fill={statusConfig.pickupColor}
+              opacity="0.9"
+            />
+            <circle cx="0" cy="-2.5" r="1.8" fill="white" opacity="0.9" />
+            <text
+              x="0"
+              y="20"
+              textAnchor="middle"
+              fill="#6B7280"
+              style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.5px', fontFamily: 'IBM Plex Sans, sans-serif' }}
+            >
+              PICKUP
+            </text>
+          </g>
+
+          <g transform={`translate(${destX}, ${destY})`}>
+            <path
+              d={getPinPath(0, 0, 8)}
+              fill={statusConfig.destColor}
+              opacity="0.9"
+            />
+            <circle cx="0" cy="-2.5" r="1.8" fill="white" opacity="0.9" />
+            <text
+              x="0"
+              y="20"
+              textAnchor="middle"
+              fill="#6B7280"
+              style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.5px', fontFamily: 'IBM Plex Sans, sans-serif' }}
+            >
+              DESTINATION
+            </text>
+          </g>
+
+          <g transform={`translate(${vehicleX}, ${vehicleY}) rotate(${vehicleAngle})`}>
+            <ellipse cx="0" cy="7" rx="11" ry="2.2" fill="#000" opacity="0.08" />
+
+            <rect x="-10" y="-8" width="10" height="10" rx="1" fill="#F5F5F5" stroke="#D0D0D0" strokeWidth="0.3" />
+            <line x1="-7" y1="-4" x2="-7" y2="1.5" stroke="#C0C0C0" strokeWidth="0.5" />
+            <rect x="-9" y="-2" width="3" height="2" rx="0.3" fill="#E0E0E0" opacity="0.7" />
+            <rect x="-5" y="-1" width="4" height="2.5" rx="0.6" fill="#7EB8DA" opacity="0.9" />
+
+            <rect x="0" y="-7.5" width="10" height="10.5" rx="1.8" fill="#1E293B" />
+
+            <rect x="2" y="-7" width="5" height="4.5" rx="0.9" fill="#7EB8DA" opacity="0.9" />
+            <rect x="3.5" y="-5.5" width="2" height="2" rx="0.3" fill="white" opacity="0.15" />
+
+            <rect x="-12" y="2" width="6" height="1.2" rx="0.6" fill="#888" />
+
+            <circle cx="8" cy="-1.5" r="1" fill="#E8C170" />
+            <ellipse cx="6" cy="-1.5" rx="3" ry="1.2" fill="#E8C170" opacity="0.08" />
+
+            <rect x="-10" y="-2.5" width="1.5" height="1.5" rx="0.3" fill="#CC3333" opacity="0.85" />
+
+            <circle cx="-4" cy="5" r="2.2" fill="#2A2A2A" />
+            <circle cx="-4" cy="5" r="0.8" fill="#666" />
+            <circle cx="4" cy="5" r="2.2" fill="#2A2A2A" />
+            <circle cx="4" cy="5" r="0.8" fill="#666" />
           </g>
 
           {isDisputed && (
-            <g transform={`translate(${vehicleX - 6}, ${routeY - 30})`}>
-              <polygon points="6,0 12,10 0,10" fill="#B91C1C" opacity="0.9" />
-              <text x="6" y="7.5" textAnchor="middle" fill="#fff" style={{ fontSize: '7px', fontWeight: 'bold' }}>!</text>
+            <g transform={`translate(${vehicleX}, ${vehicleY - 28})`}>
+              <polygon points="0,0 12,10 0,20" fill="#B91C1C" opacity="0.9" />
+              <text x="6" y="15" textAnchor="middle" fill="#fff" style={{ fontSize: '8px', fontWeight: 'bold' }}>!</text>
             </g>
           )}
 
           {isPaymentPending && (
-            <g transform={`translate(${vehicleX - 7}, ${routeY - 28})`}>
+            <g transform={`translate(${vehicleX}, ${vehicleY - 30})`}>
               <rect x="0" y="0" width="14" height="14" rx="4" fill="#B45309" opacity="0.9" />
-              <text x="7" y="10" textAnchor="middle" fill="#fff" style={{ fontSize: '9px', fontWeight: 'bold' }}>₹</text>
+              <text x="7" y="11" textAnchor="middle" fill="#fff" style={{ fontSize: '9px', fontWeight: 'bold' }}>₹</text>
             </g>
           )}
 
           <text
             x={pickupX}
-            y={routeY + 26}
+            y={pickupY + 34}
             textAnchor="middle"
             fill="#374151"
-            style={{ fontSize: '9px', fontFamily: 'IBM Plex Mono, monospace' }}
+            style={{ fontSize: '8px', fontFamily: 'IBM Plex Mono, monospace' }}
           >
             {formatLocation(shipment.pickup_location)}
           </text>
 
           <text
             x={destX}
-            y={routeY + 26}
+            y={destY + 34}
             textAnchor="middle"
             fill="#374151"
-            style={{ fontSize: '9px', fontFamily: 'IBM Plex Mono, monospace' }}
+            style={{ fontSize: '8px', fontFamily: 'IBM Plex Mono, monospace' }}
           >
             {formatLocation(shipment.delivery_location)}
           </text>
