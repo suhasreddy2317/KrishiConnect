@@ -41,9 +41,12 @@ export const AppLayout: React.FC = () => {
     <div className="h-screen flex flex-col bg-background text-text-main overflow-hidden">
       <header className="shrink-0 z-50 bg-surface/90 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center h-16">
             <div className="flex items-center space-x-3">
-              <NavLink to="/" className="flex items-center space-x-2.5 group">
+              <NavLink
+                to="/"
+                className="flex items-center space-x-2.5 group"
+              >
                 <div className="w-9 h-9 rounded-md bg-primary border border-border flex items-center justify-center text-white font-mono font-bold text-lg shadow-sm group-hover:border-accent transition-colors">
                   KC
                 </div>
@@ -58,43 +61,45 @@ export const AppLayout: React.FC = () => {
               </NavLink>
             </div>
 
-            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center space-x-1.5 ${
-                    isActive
-                      ? 'bg-primary text-white border border-border'
-                      : 'text-text-muted hover:text-text-main hover:bg-surface-raised'
-                  }`
-                }
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Overview</span>
-              </NavLink>
+            <nav className="flex-1 hidden md:flex justify-center">
+              <div className="flex items-center space-x-1 lg:space-x-2">
+                <NavLink
+                  to="/"
+                  className={({ isActive }) =>
+                    `px-3 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center space-x-1.5 ${
+                      isActive
+                        ? 'bg-primary text-white border border-border'
+                        : 'text-text-muted hover:text-text-main hover:bg-surface-raised'
+                    }`
+                  }
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Overview</span>
+                </NavLink>
 
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `px-3 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center space-x-1.5 ${
-                        isActive
-                          ? 'bg-primary text-white border border-border'
-                          : 'text-text-muted hover:text-text-main hover:bg-surface-raised'
-                      }`
-                    }
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{item.name}</span>
-                  </NavLink>
-                );
-              })}
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `px-3 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center space-x-1.5 ${
+                          isActive
+                            ? 'bg-primary text-white border border-border'
+                            : 'text-text-muted hover:text-text-main hover:bg-surface-raised'
+                        }`
+                      }
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
             </nav>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 ml-auto">
               {user && (
                 <button
                   type="button"

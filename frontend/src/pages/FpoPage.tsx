@@ -350,7 +350,7 @@ export const FpoPage: React.FC = () => {
           roleBadge={<StatusBadge status="kyc-verified" label="FPO Verified" size="sm" />}
           statusBadge={<SyncStatus state="Synced" lastSyncedTime="5m ago" />}
           primaryAction={
-            <Button variant="primary" size="md" leftIcon={<Plus className="w-4 h-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="w-4 h-4" />} onClick={() => navigate('/fpo/lots')}>
               Pool New Lot
             </Button>
           }
