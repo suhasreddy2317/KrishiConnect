@@ -12,7 +12,6 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { API_BASE_URL } from '@/lib/api';
 
 interface NavItem {
   name: string;
@@ -31,31 +30,8 @@ const navItems: NavItem[] = [
 
 export const AppLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const location = useLocation();
   const { user, logout } = useAuth();
-
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/health`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'healthy') {
-            setBackendStatus('healthy');
-            return;
-          }
-        }
-        setBackendStatus('offline');
-      } catch {
-        setBackendStatus('offline');
-      }
-    };
-
-    checkHealth();
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -119,29 +95,6 @@ export const AppLayout: React.FC = () => {
             </nav>
 
             <div className="flex items-center space-x-3">
-              <div
-                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono border"
-                style={{
-                  backgroundColor: 'rgb(var(--surface-raised) / 0.8)',
-                  borderColor: 'rgb(var(--border))',
-                }}
-              >
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{
-                    backgroundColor: backendStatus === 'healthy' ? '#16A34A' : backendStatus === 'offline' ? '#DC2626' : '#D97706',
-                  }}
-                />
-                <span
-                  className="hidden sm:inline"
-                  style={{
-                    color: backendStatus === 'healthy' ? '#16A34A' : backendStatus === 'offline' ? '#DC2626' : '#D97706',
-                  }}
-                >
-                  API: {backendStatus}
-                </span>
-              </div>
-
               {user && (
                 <button
                   type="button"

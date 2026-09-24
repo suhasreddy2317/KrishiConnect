@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import {
   Users,
@@ -17,7 +17,6 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { API_BASE_URL } from '@/lib/api';
 
 const navItems = [
   { name: 'Overview', path: '/' },
@@ -31,7 +30,6 @@ const navItems = [
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
@@ -74,28 +72,6 @@ export const HomePage: React.FC = () => {
     []
   );
 
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/health`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'healthy') {
-            setBackendStatus('healthy');
-            return;
-          }
-        }
-        setBackendStatus('offline');
-      } catch {
-        setBackendStatus('offline');
-      }
-    };
-
-    checkHealth();
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className="min-h-screen bg-background text-text-main">
       {/* Header */}
@@ -135,29 +111,6 @@ export const HomePage: React.FC = () => {
             </nav>
 
             <div className="flex items-center space-x-3">
-              <div
-                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono border"
-                style={{
-                  backgroundColor: 'rgb(var(--surface-raised) / 0.8)',
-                  borderColor: 'rgb(var(--border))',
-                }}
-              >
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{
-                    backgroundColor: backendStatus === 'healthy' ? '#16A34A' : backendStatus === 'offline' ? '#DC2626' : '#D97706',
-                  }}
-                />
-                <span
-                  className="hidden sm:inline"
-                  style={{
-                    color: backendStatus === 'healthy' ? '#16A34A' : backendStatus === 'offline' ? '#DC2626' : '#D97706',
-                  }}
-                >
-                  API: {backendStatus}
-                </span>
-              </div>
-
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
