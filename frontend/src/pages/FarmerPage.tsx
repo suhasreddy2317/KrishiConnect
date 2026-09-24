@@ -962,7 +962,10 @@ export const FarmerPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {offer.status !== 'accepted' && offer.status !== 'rejected' && offer.status !== 'expired' && offer.round % 2 === 1 && (
+              {offer.status === 'countered' && (
+                <span className="text-xs text-text-muted font-mono">Historical Offer</span>
+              )}
+              {offer.status !== 'accepted' && offer.status !== 'rejected' && offer.status !== 'expired' && offer.status !== 'countered' && offer.round % 2 === 1 && (
                 <>
                   <Button size="sm" variant="primary" onClick={() => handleAcceptOffer(offer)}>{t('farmerPage.offers.acceptOffer')}</Button>
                   <Button size="sm" variant="outline" onClick={() => handleCounterOffer(offer)}>{t('farmerPage.offers.counter')}</Button>
