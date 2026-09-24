@@ -19,8 +19,10 @@ import { Tabs } from '@/components/ui/Tabs';
 import { Drawer } from '@/components/ui/Drawer';
 import { Dialog } from '@/components/ui/Dialog';
 import { Plus, HelpCircle, Truck, Wallet, AlertTriangle, Package, Clock, CheckCircle2, Home, TrendingUp } from 'lucide-react';
+import { ShipmentMap } from '@/components/shipment/ShipmentMap';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTextToSpeech } from '@/components/voice/useTextToSpeech';
 import { VoiceAssistant, VoiceAssistantHandle } from '@/components/voice/VoiceAssistant';
@@ -210,6 +212,7 @@ export const FarmerPage: React.FC = () => {
   const [shipmentsLoading, setShipmentsLoading] = useState(false);
   const [shipmentsError, setShipmentsError] = useState<string | null>(null);
   const [shipments, setShipments] = useState<BackendShipment[]>([]);
+  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
 
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
@@ -276,6 +279,13 @@ export const FarmerPage: React.FC = () => {
     fetchPayments();
     fetchDisputes();
   }, [token]);
+
+  useEffect(() => {
+    if (selectedShipmentId) return;
+    const priority = ['in_transit', 'dispatched', 'pending', 'confirmed', 'delivered', 'payment_pending', 'disputed'];
+    const match = shipments.find(s => priority.includes(s.status));
+    setSelectedShipmentId(match ? match.id : (shipments[0]?.id ?? null));
+  }, [shipments, selectedShipmentId]);
 
   useEffect(() => {
     if (isLotDrawerOpen && token) {
@@ -997,23 +1007,41 @@ export const FarmerPage: React.FC = () => {
     if (shipmentsError) return <ErrorState title={t('farmerPage.shipments.loadError')} message={shipmentsError} onRetry={fetchShipments} />;
     if (shipments.length === 0) return <EmptyState icon={<Truck className="w-6 h-6" />} title={t('farmerPage.shipments.noShipments')} description={t('farmerPage.shipments.noShipmentsDescription')} />;
 
+    const selectedShipment = shipments.find(s => s.id === selectedShipmentId) || shipments[0];
+
     return (
       <div className="space-y-4">
-        {shipments.map(shipment => (
-          <Card key={shipment.id} variant="default" title={`Shipment #${shipment.id}`} subtitle={`Transaction #${shipment.transaction_id}`} headerAction={<StatusBadge status={['delivered', 'payment_pending', 'completed'].includes(shipment.status) ? 'completed' : 'active'} label={shipment.status} size="sm" />}>
-            <div className="text-xs text-text-muted font-mono space-y-1">
-              <div>Pickup: {shipment.pickup_location} • Delivery: {shipment.delivery_location}</div>
-              {shipment.transporter_name && <div>Transporter: {shipment.transporter_name} • Vehicle: {shipment.vehicle_number}</div>}
-              {shipment.estimated_pickup && <div>Est. Pickup: {new Date(shipment.estimated_pickup).toLocaleString()}</div>}
-              {shipment.estimated_delivery && <div>Est. Delivery: {new Date(shipment.estimated_delivery).toLocaleString()}</div>}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {shipment.status !== 'completed' && (NEXT_SHIPMENT_TRANSITION[shipment.status] || []).map(next => (
-                <Button key={next} size="sm" variant="outline" onClick={() => handleUpdateShipmentStatus(shipment.id, next)}>{t('farmerPage.markStatus', { status: next })}</Button>
-              ))}
-            </div>
-          </Card>
-        ))}
+        {selectedShipment && (
+          <ShipmentMap shipment={selectedShipment} />
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {shipments.map(shipment => {
+            const isSelected = shipment.id === selectedShipmentId;
+            return (
+              <Card
+                key={shipment.id}
+                variant={isSelected ? 'raised' : 'default'}
+                padding="md"
+                className={cn('cursor-pointer transition-colors', isSelected ? 'border-accent/60' : 'hover:border-border')}
+                onClick={() => setSelectedShipmentId(shipment.id)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-mono text-text-main">Shipment #{shipment.id}</span>
+                  <StatusBadge status={['delivered', 'payment_pending', 'completed'].includes(shipment.status) ? 'completed' : 'active'} label={shipment.status} size="sm" />
+                </div>
+                <div className="text-xs text-text-muted font-mono space-y-1">
+                  <div>Pickup: {shipment.pickup_location} • Delivery: {shipment.delivery_location}</div>
+                  {shipment.transporter_name && <div>Transporter: {shipment.transporter_name} • Vehicle: {shipment.vehicle_number}</div>}
+                  {shipment.estimated_delivery && <div>Est. Delivery: {new Date(shipment.estimated_delivery).toLocaleString()}</div>}
+                </div>
+                {shipment.status !== 'completed' && (NEXT_SHIPMENT_TRANSITION[shipment.status] || []).map(next => (
+                  <Button key={next} size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleUpdateShipmentStatus(shipment.id, next); }}>{t('farmerPage.markStatus', { status: next })}</Button>
+                ))}
+              </Card>
+            );
+          })}
+        </div>
       </div>
     );
   };

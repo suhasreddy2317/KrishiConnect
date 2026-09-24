@@ -23,6 +23,7 @@ import { LoadingState } from '@/components/data-display/LoadingState';
 import { ErrorState } from '@/components/data-display/ErrorState';
 import { EmptyState } from '@/components/data-display/EmptyState';
 import { Building2, Send, ShieldCheck, Activity, Search, FileText, AlertCircle, Truck, Wallet, Scale, Users } from 'lucide-react';
+import { ShipmentMap } from '@/components/shipment/ShipmentMap';
 
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
@@ -450,6 +451,7 @@ export const BuyerPage: React.FC = () => {
   const [shipments, setShipments] = useState<BackendShipment[]>([]);
   const [shipmentsLoading, setShipmentsLoading] = useState(false);
   const [shipmentsError, setShipmentsError] = useState<string | null>(null);
+  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
 
   const [payments, setPayments] = useState<BackendPayment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -1339,6 +1341,13 @@ export const BuyerPage: React.FC = () => {
   }, [token]);
 
   useEffect(() => {
+    if (selectedShipmentId) return;
+    const priority = ['in_transit', 'dispatched', 'pending', 'confirmed', 'delivered', 'payment_pending', 'disputed'];
+    const match = shipments.find(s => priority.includes(s.status));
+    setSelectedShipmentId(match ? match.id : (shipments[0]?.id ?? null));
+  }, [shipments, selectedShipmentId]);
+
+  useEffect(() => {
     if (!token) return;
     fetchPayments();
   }, [token]);
@@ -2094,16 +2103,22 @@ export const BuyerPage: React.FC = () => {
                {!shipmentsLoading && !shipmentsError && shipments.length === 0 && (
                  <EmptyState icon={<Truck className="w-6 h-6" />} title="No shipments" description="Shipments are created after transaction confirmation and logistics assignment." />
                )}
-               {!shipmentsLoading && !shipmentsError && shipments.length > 0 && (
-                 <Card variant="default" padding="none">
-                   <Table
-                     columns={shipmentColumns}
-                     data={shipments}
-                     keyExtractor={(item) => String(item.id)}
-                     emptyMessage="No shipments"
-                   />
-                 </Card>
-                 )}
+                {!shipmentsLoading && !shipmentsError && shipments.length > 0 && (
+                  <div className="space-y-4">
+                    {shipments.find(s => s.id === selectedShipmentId) && (
+                      <ShipmentMap shipment={shipments.find(s => s.id === selectedShipmentId)!} />
+                    )}
+                    <Card variant="default" padding="none">
+                      <Table
+                        columns={shipmentColumns}
+                        data={shipments}
+                        keyExtractor={(item) => String(item.id)}
+                        emptyMessage="No shipments"
+                        onRowClick={(item) => setSelectedShipmentId(item.id)}
+                      />
+                    </Card>
+                  </div>
+                )}
              </Section>
         </div>
       )}
