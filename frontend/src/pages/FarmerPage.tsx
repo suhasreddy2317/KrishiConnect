@@ -273,20 +273,13 @@ export const FarmerPage: React.FC = () => {
   ], [t, lots.length, offers.length, transactions.length, shipments.length, payments.length, disputes.length]);
 
   const recommendationCrops = useMemo(() => {
-    const seen = new Set<number>();
-    return lots
-      .filter(l => l.commodity_id != null)
-      .filter(l => {
-        const id = l.commodity_id as number;
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      })
-      .map(l => ({
-        id: l.commodity_id as number,
-        name: localizedCropName(l.crop),
+    return commodities
+      .filter(c => c.is_active !== false)
+      .map(c => ({
+        id: c.id,
+        name: localizedCropName(c.name),
       }));
-  }, [lots, localizedCropName]);
+  }, [commodities, localizedCropName]);
 
   const handleCropSelect = useCallback((commodityId: number) => {
     setSelectedCommodityId(commodityId);
@@ -300,6 +293,7 @@ export const FarmerPage: React.FC = () => {
     fetchShipments();
     fetchPayments();
     fetchDisputes();
+    fetchCommodities();
   }, [token]);
 
   useEffect(() => {
@@ -505,8 +499,27 @@ export const FarmerPage: React.FC = () => {
     }
   }, [token]);
 
+  const fetchRecommendationFor = useCallback(async (commodityId: number, marketId: number) => {
+    if (!token) return;
+    setRecommendationLoading(true);
+    setRecommendationError(null);
+    try {
+      const data = await apiRequest<SaleWindowResponse>(
+        `/recommendations/sale-window?commodity_id=${commodityId}&market_id=${marketId}`,
+        { method: 'GET' },
+        token
+      );
+      setRecommendation(data);
+    } catch {
+      setRecommendationError('Unable to load recommendation. Showing last available data.');
+    } finally {
+      setRecommendationLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
-    if (!token || lots.length === 0) return;
+    if (!token) return;
+    if (lots.length === 0 && selectedCommodityId === null) return;
 
     let targetLot: BackendLot | null = null;
 
@@ -515,6 +528,10 @@ export const FarmerPage: React.FC = () => {
     }
 
     if (!targetLot) {
+      if (selectedCommodityId !== null) {
+        fetchRecommendationFor(selectedCommodityId, 1);
+        return;
+      }
       const sortedLots = [...lots].sort((a, b) => b.id - a.id);
       targetLot = sortedLots.find(l => l.status === 'published') || lots[0];
       if (targetLot?.commodity_id != null) {
@@ -527,7 +544,7 @@ export const FarmerPage: React.FC = () => {
       lastFetchedLotIdRef.current = targetLot.id;
       fetchRecommendation(targetLot);
     }
-  }, [token, lots, selectedCommodityId, fetchRecommendation]);
+  }, [token, lots, selectedCommodityId, fetchRecommendation, fetchRecommendationFor]);
 
   const VERDICT_TTS_KEY: Record<string, string> = {
     SELL_NOW: 'sellNow',
