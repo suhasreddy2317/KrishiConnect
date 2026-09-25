@@ -159,7 +159,7 @@ export const FarmerPage: React.FC = () => {
   const { language, t } = useLanguage();
   const { speak, stop, isSpeaking, canSpeak, hasVoiceFor } = useTextToSpeech();
 
-  const localizedCropName = (crop: string): string => {
+  const localizedCropName = useCallback((crop: string): string => {
     const map: Record<string, string> = {
       Wheat: t('recommendationCard.cropNames.wheat'),
       Soybean: t('recommendationCard.cropNames.soybean'),
@@ -168,7 +168,7 @@ export const FarmerPage: React.FC = () => {
       Tomato: t('recommendationCard.cropNames.tomato'),
     };
     return map[crop] || crop;
-  };
+  }, [t]);
   const location = useLocation();
 
   const getActiveTab = (): TabId => {
@@ -180,6 +180,7 @@ export const FarmerPage: React.FC = () => {
 
   const activeTab = getActiveTab();
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
+  const [selectedCommodityId, setSelectedCommodityId] = useState<number | null>(null);
   const [isLotDrawerOpen, setIsLotDrawerOpen] = useState(false);
   const [lotCrop, setLotCrop] = useState('');
   const [lotQuantity, setLotQuantity] = useState('');
@@ -228,6 +229,7 @@ export const FarmerPage: React.FC = () => {
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
 
   const voiceAssistantRef = useRef<VoiceAssistantHandle>(null);
+  const lastFetchedLotIdRef = useRef<number | null>(null);
 
   const handleListenRecommendation = useCallback(
     (text: string) => {
@@ -269,6 +271,26 @@ export const FarmerPage: React.FC = () => {
     { id: '/farmer/payments' as TabId, label: t('dashboard.payments'), icon: <Wallet className="w-4 h-4" />, count: payments.length || undefined },
     { id: '/farmer/disputes' as TabId, label: t('dashboard.disputes'), icon: <AlertTriangle className="w-4 h-4" />, count: disputes.length || undefined },
   ], [t, lots.length, offers.length, transactions.length, shipments.length, payments.length, disputes.length]);
+
+  const recommendationCrops = useMemo(() => {
+    const seen = new Set<number>();
+    return lots
+      .filter(l => l.commodity_id != null)
+      .filter(l => {
+        const id = l.commodity_id as number;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
+      .map(l => ({
+        id: l.commodity_id as number,
+        name: localizedCropName(l.crop),
+      }));
+  }, [lots, localizedCropName]);
+
+  const handleCropSelect = useCallback((commodityId: number) => {
+    setSelectedCommodityId(commodityId);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -448,24 +470,22 @@ export const FarmerPage: React.FC = () => {
     }
   };
 
-  const fetchRecommendation = async () => {
+  const fetchRecommendation = useCallback(async (lot: BackendLot) => {
     if (!token) return;
     setRecommendationLoading(true);
     setRecommendationError(null);
     try {
-      const sortedLots = [...lots].sort((a, b) => b.id - a.id);
-      const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
-      if (!bestLot || bestLot.commodity_id == null) {
+      if (!lot || lot.commodity_id == null) {
         setRecommendation(null);
         setRecommendationLoading(false);
         return;
       }
-      let marketId = bestLot.location
+      let marketId = lot.location
         ? (() => {
             const marketMap: Record<string, number> = {
               nashik: 1, lasalgaon: 1, pimpalgaon: 2,
             };
-            const key = bestLot.location!.toLowerCase();
+            const key = lot.location!.toLowerCase();
             for (const [k, v] of Object.entries(marketMap)) {
               if (key.includes(k)) return v;
             }
@@ -473,7 +493,7 @@ export const FarmerPage: React.FC = () => {
           })()
         : 1;
       const data = await apiRequest<SaleWindowResponse>(
-        `/recommendations/sale-window?commodity_id=${bestLot.commodity_id}&market_id=${marketId}`,
+        `/recommendations/sale-window?commodity_id=${lot.commodity_id}&market_id=${marketId}`,
         { method: 'GET' },
         token
       );
@@ -483,12 +503,31 @@ export const FarmerPage: React.FC = () => {
     } finally {
       setRecommendationLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (!token || lots.length === 0) return;
-    fetchRecommendation();
-  }, [token, lots]);
+
+    let targetLot: BackendLot | null = null;
+
+    if (selectedCommodityId !== null) {
+      targetLot = lots.find(l => l.commodity_id === selectedCommodityId) || null;
+    }
+
+    if (!targetLot) {
+      const sortedLots = [...lots].sort((a, b) => b.id - a.id);
+      targetLot = sortedLots.find(l => l.status === 'published') || lots[0];
+      if (targetLot?.commodity_id != null) {
+        setSelectedCommodityId(targetLot.commodity_id);
+        return;
+      }
+    }
+
+    if (targetLot && lastFetchedLotIdRef.current !== targetLot.id) {
+      lastFetchedLotIdRef.current = targetLot.id;
+      fetchRecommendation(targetLot);
+    }
+  }, [token, lots, selectedCommodityId, fetchRecommendation]);
 
   const VERDICT_TTS_KEY: Record<string, string> = {
     SELL_NOW: 'sellNow',
@@ -776,10 +815,13 @@ export const FarmerPage: React.FC = () => {
     const sortedLots = [...lots].sort((a, b) => b.id - a.id);
     const bestLot = sortedLots.find(l => l.status === 'published') || lots[0];
     const activeTransaction = transactions[0];
+    const selectedLot = selectedCommodityId !== null
+      ? lots.find(l => l.commodity_id === selectedCommodityId)
+      : null;
 
     const displayRecommendation = recommendation;
     const displayCropName = localizedCropName(
-      displayRecommendation?.commodity_name || bestLot?.crop || 'your crop'
+      displayRecommendation?.commodity_name || selectedLot?.crop || bestLot?.crop || 'your crop'
     );
     const displayVerdict = displayRecommendation
       ? (displayRecommendation.verdict.replace(/_/g, ' ') as RecommendationVerdict)
@@ -811,7 +853,15 @@ export const FarmerPage: React.FC = () => {
         {recommendationError && (
           <div className="p-3 rounded-xl bg-status-warning/10 border border-status-warning/30 flex items-start justify-between gap-3">
             <p className="text-xs text-status-warning">{recommendationError}</p>
-            <Button size="sm" variant="ghost" onClick={fetchRecommendation}>{t('common.retry')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => {
+              const lot = selectedCommodityId !== null
+                ? lots.find(l => l.commodity_id === selectedCommodityId)
+                : (() => {
+                    const sorted = [...lots].sort((a, b) => b.id - a.id);
+                    return sorted.find(l => l.status === 'published') || lots[0];
+                  })();
+              if (lot) fetchRecommendation(lot);
+            }}>{t('common.retry')}</Button>
           </div>
         )}
 
@@ -859,6 +909,10 @@ export const FarmerPage: React.FC = () => {
           canListen={canSpeak}
           isSpeaking={isSpeaking}
           voiceAvailable={hasVoiceFor(language)}
+          availableCrops={recommendationCrops.map(c => ({ id: c.id, name: c.name }))}
+          selectedCropId={selectedCommodityId}
+          onSelectCrop={handleCropSelect}
+          isLoading={recommendationLoading}
         />
 
         {activeTransaction && (

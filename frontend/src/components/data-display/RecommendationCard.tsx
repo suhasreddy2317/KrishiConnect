@@ -43,6 +43,10 @@ export interface RecommendationCardProps {
   isSpeaking?: boolean;
   voiceAvailable?: boolean;
   className?: string;
+  availableCrops?: Array<{ id: number; name: string }>;
+  selectedCropId?: number | null;
+  onSelectCrop?: (cropId: number) => void;
+  isLoading?: boolean;
 }
 
 const VERDICT_EXPLANATION_KEY: Record<RecommendationVerdict, string> = {
@@ -76,6 +80,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   isSpeaking = false,
   voiceAvailable = true,
   className,
+  availableCrops,
+  selectedCropId,
+  onSelectCrop,
+  isLoading = false,
 }) => {
   const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -166,6 +174,29 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {availableCrops && availableCrops.length > 1 && (
+            <div className="relative">
+              <select
+                value={selectedCropId?.toString() ?? ''}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val !== selectedCropId) {
+                    onSelectCrop?.(val);
+                  }
+                }}
+                disabled={!onSelectCrop || isLoading}
+                className="h-8 pl-2 pr-8 bg-[#1E5A28]/30 text-[#B9E4BC] text-xs font-mono rounded border border-white/10 appearance-none cursor-pointer transition-all hover:border-white/20 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Select crop"
+              >
+                {availableCrops.map(crop => (
+                  <option key={crop.id} value={crop.id} className="bg-surface text-text-main">
+                    {crop.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#B9E4BC]/60 pointer-events-none" />
+            </div>
+          )}
           {canListen && onListen && (
             <Button
               variant="ghost"
