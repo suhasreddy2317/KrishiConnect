@@ -285,7 +285,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
       <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {primaryActionLabel && (
           <span className="text-xs text-[#B9E4BC]/80 hidden sm:block">
-            {t('recommendationCard.recommendedAction')}:
+            {t('recommendationCard.recommendedAction')}: {getVerdictLocalized()}
           </span>
         )}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
